@@ -67,6 +67,21 @@ func TestSDKContainerSecurityConfiguration(t *testing.T) {
 		t.Fatal("missing HostConfig")
 	}
 
+	if host.LogConfig.Type != "json-file" {
+		t.Errorf(
+			"log driver = %q; want json-file",
+			host.LogConfig.Type,
+		)
+	}
+
+	if got := host.LogConfig.Config["max-size"]; got != "1m" {
+		t.Errorf("log max-size = %q; want 1m", got)
+	}
+
+	if got := host.LogConfig.Config["max-file"]; got != "1" {
+		t.Errorf("log max-file = %q; want 1", got)
+	}
+
 	if string(host.NetworkMode) != "none" {
 		t.Errorf("network mode = %q; want none", host.NetworkMode)
 	}

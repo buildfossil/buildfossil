@@ -27,6 +27,13 @@ func newSecureContainerOptions(
 			AttachStderr: true,
 		},
 		HostConfig: &container.HostConfig{
+			LogConfig: container.LogConfig{
+				Type: "json-file",
+				Config: map[string]string{
+					"max-size": "1m",
+					"max-file": "1",
+				},
+			},
 			NetworkMode:    "none",
 			CapDrop:        []string{"ALL"},
 			SecurityOpt:    []string{"no-new-privileges"},

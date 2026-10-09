@@ -65,12 +65,50 @@ func RunWithSDK(
 		)
 	}()
 
+	attached, err := dockerClient.ContainerAttach(
+		ctx,
+		created.ID,
+		client.ContainerAttachOptions{
+			Stream: true,
+			Stdin:  false,
+			Stdout: true,
+			Stderr: true,
+			Logs:   false,
+		},
+	)
+	if err != nil {
+		return 0, fmt.Errorf("docker SDK: attach container: %w", err)
+	}
+	defer attached.Close()
+
+	// Читаем потоки параллельно с выполнением контейнера.
+	streamDone := make(chan error, 1)
+
+	streamFinished := false
+
+	defer func() {
+		if !streamFinished {
+			attached.Close()
+			<-streamDone
+		}
+	}()
+
+	go func() {
+		_, streamErr := stdcopy.StdCopy(
+			stdout,
+			stderr,
+			attached.Reader,
+		)
+		streamDone <- streamErr
+	}()
+
 	_, err = dockerClient.ContainerStart(
 		ctx,
 		created.ID,
 		client.ContainerStartOptions{},
 	)
 	if err != nil {
+		attached.Close()
 		return 0, fmt.Errorf("docker SDK: start container: %w", err)
 	}
 
@@ -97,31 +135,39 @@ func RunWithSDK(
 		}
 		exitCode = int(response.StatusCode)
 
-	case err, ok := <-wait.Error:
+	case waitErr, ok := <-wait.Error:
 		if !ok {
 			return 0, fmt.Errorf("docker SDK: wait error channel closed")
 		}
-		return 0, fmt.Errorf("docker SDK: wait container: %w", err)
+		return 0, fmt.Errorf("docker SDK: wait container: %w", waitErr)
 
 	case <-ctx.Done():
-		return 0, fmt.Errorf("docker SDK: execution canceled: %w", ctx.Err())
+		attached.Close()
+		return 0, fmt.Errorf(
+			"docker SDK: execution canceled: %w",
+			ctx.Err(),
+		)
 	}
 
-	logs, err := dockerClient.ContainerLogs(
-		ctx,
-		created.ID,
-		client.ContainerLogsOptions{
-			ShowStdout: true,
-			ShowStderr: true,
-		},
-	)
-	if err != nil {
-		return 0, fmt.Errorf("docker SDK: retrieve logs: %w", err)
-	}
-	defer logs.Close()
+	// Важно: ContainerWait не гарантирует, что все данные
+	// уже прочитаны из Attach-соединения.
+	select {
+	case streamErr := <-streamDone:
+		streamFinished = true
 
-	if _, err := stdcopy.StdCopy(stdout, stderr, logs); err != nil {
-		return 0, fmt.Errorf("docker SDK: decode container streams: %w", err)
+		if streamErr != nil {
+			return 0, fmt.Errorf(
+				"docker SDK: read container streams: %w",
+				streamErr,
+			)
+		}
+
+	case <-ctx.Done():
+		attached.Close()
+		return 0, fmt.Errorf(
+			"docker SDK: stream canceled: %w",
+			ctx.Err(),
+		)
 	}
 
 	return exitCode, nil

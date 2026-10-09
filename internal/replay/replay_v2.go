@@ -72,7 +72,7 @@ func RunV2WithOptions(
 		argv,
 		containerUser,
 		io.Discard,
-		io.MultiWriter(os.Stderr, &stderr),
+		&stderr,
 	)
 	if err != nil {
 		return result, fmt.Errorf("replay: Docker execution: %w", err)
