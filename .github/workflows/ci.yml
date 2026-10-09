@@ -60,14 +60,16 @@ jobs:
           docker version
           docker info --format '{{.OSType}}/{{.Architecture}}'
 
-      - name: Prepare BuildFossil replay image
+      - name: Verify replay image is not preloaded
         run: |
-          docker pull --platform linux/amd64 \
-            ghcr.io/buildfossil/replay-base@sha256:51ea5ed5cda2f1133ed5b0c07f7f26902e0ed7f9527671a3491525bbc080c944
-
-          docker image inspect \
+          if docker image inspect \
             ghcr.io/buildfossil/replay-base@sha256:51ea5ed5cda2f1133ed5b0c07f7f26902e0ed7f9527671a3491525bbc080c944 \
-            --format '{{.Os}}/{{.Architecture}}'
+            >/dev/null 2>&1; then
+            echo "Replay image is already cached; cold-pull path not tested"
+            exit 1
+          fi
+
+          echo "Replay image is absent; SDK must download it"
 
       - name: Run Capture and Replay v2 E2E
         shell: bash

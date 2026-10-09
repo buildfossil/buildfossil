@@ -36,6 +36,10 @@ func RunWithSDK(
 	}
 	defer dockerClient.Close()
 
+	if err := ensureReplayImage(ctx, dockerClient); err != nil {
+		return 0, fmt.Errorf("docker SDK: prepare replay image: %w", err)
+	}
+
 	created, err := dockerClient.ContainerCreate(
 		ctx,
 		newSecureContainerOptions(workspace, argv, user),
