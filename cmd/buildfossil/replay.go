@@ -5,9 +5,21 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/buildfossil/buildfossil/internal/replay"
 )
+
+func replayContext(
+	parent context.Context,
+	useV2 bool,
+) (context.Context, context.CancelFunc) {
+	if useV2 {
+		return context.WithCancel(parent)
+	}
+
+	return context.WithTimeout(parent, 30*time.Second)
+}
 
 func runReplay(args []string) int {
 	const usage = "Usage: buildfossil replay [--v2] [--allow-command] <capsule.bfc>"
@@ -43,11 +55,14 @@ func runReplay(args []string) int {
 		return 2
 	}
 
-	ctx, stop := signal.NotifyContext(
+	signalCtx, stop := signal.NotifyContext(
 		context.Background(),
 		os.Interrupt,
 	)
 	defer stop()
+
+	ctx, cancel := replayContext(signalCtx, useV2)
+	defer cancel()
 
 	var result replay.Result
 	var err error

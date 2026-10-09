@@ -310,3 +310,34 @@ func TestSDKRunExecutionDeadline(t *testing.T) {
 		t.Fatalf("execution cancellation took too long: %s", elapsed)
 	}
 }
+func TestSDKInternalExecutionTimeout(t *testing.T) {
+	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+		t.Skip("Docker integration test disabled")
+	}
+
+	workspace := t.TempDir()
+	user := fmt.Sprintf("%d:%d", os.Geteuid(), os.Getegid())
+
+	// Родительский контекст специально без deadline.
+	ctx := context.Background()
+
+	start := time.Now()
+
+	_, err := runWithSDKTimeout(
+		ctx,
+		workspace,
+		[]string{"/bin/sh", "-c", "sleep 60"},
+		user,
+		io.Discard,
+		io.Discard,
+		1500*time.Millisecond,
+	)
+
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected internal deadline exceeded; got %v", err)
+	}
+
+	if elapsed := time.Since(start); elapsed > 8*time.Second {
+		t.Fatalf("internal timeout took too long: %s", elapsed)
+	}
+}

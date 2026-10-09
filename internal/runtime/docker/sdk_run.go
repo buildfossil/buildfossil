@@ -27,6 +27,8 @@ func combineCleanupError(runErr, cleanupErr error, containerID string) error {
 	)
 }
 
+const defaultExecutionTimeout = 30 * time.Second
+
 // RunWithSDK executes a command in an isolated Docker container.
 // stdout and stderr contain only the container process output.
 func RunWithSDK(
@@ -35,6 +37,25 @@ func RunWithSDK(
 	argv []string,
 	user string,
 	stdout, stderr io.Writer,
+) (int, error) {
+	return runWithSDKTimeout(
+		ctx,
+		workspace,
+		argv,
+		user,
+		stdout,
+		stderr,
+		defaultExecutionTimeout,
+	)
+}
+
+func runWithSDKTimeout(
+	ctx context.Context,
+	workspace string,
+	argv []string,
+	user string,
+	stdout, stderr io.Writer,
+	executionTimeout time.Duration,
 ) (exitCode int, runErr error) {
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("docker SDK: empty command")
@@ -63,11 +84,11 @@ func RunWithSDK(
 
 	// Separate execution timeout; image preparation time does not
 	// reduce the time available to the container process.
-	execCtx, cancelExec := context.WithTimeout(ctx, 30*time.Second)
+	execCtx, cancelExec := context.WithTimeout(ctx, executionTimeout)
 	defer cancelExec()
 
 	created, err := dockerClient.ContainerCreate(
-		ctx,
+		execCtx,
 		newSecureContainerOptions(workspace, argv, user),
 	)
 	if err != nil {
@@ -94,7 +115,7 @@ func RunWithSDK(
 	}()
 
 	attached, err := dockerClient.ContainerAttach(
-		ctx,
+		execCtx,
 		created.ID,
 		client.ContainerAttachOptions{
 			Stream: true,
@@ -131,7 +152,7 @@ func RunWithSDK(
 	}()
 
 	_, err = dockerClient.ContainerStart(
-		ctx,
+		execCtx,
 		created.ID,
 		client.ContainerStartOptions{},
 	)
@@ -141,7 +162,7 @@ func RunWithSDK(
 	}
 
 	wait := dockerClient.ContainerWait(
-		ctx,
+		execCtx,
 		created.ID,
 		client.ContainerWaitOptions{
 			Condition: container.WaitConditionNotRunning,
@@ -167,7 +188,7 @@ func RunWithSDK(
 		}
 		return 0, fmt.Errorf("docker SDK: wait container: %w", waitErr)
 
-	case <-ctx.Done():
+	case <-execCtx.Done():
 		attached.Close()
 		return 0, fmt.Errorf(
 			"docker SDK: execution canceled: %w",
@@ -188,7 +209,7 @@ func RunWithSDK(
 			)
 		}
 
-	case <-ctx.Done():
+	case <-execCtx.Done():
 		attached.Close()
 		return 0, fmt.Errorf(
 			"docker SDK: stream canceled: %w",

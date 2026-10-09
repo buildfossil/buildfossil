@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/buildfossil/buildfossil/internal/capsule"
 )
@@ -53,5 +55,60 @@ func TestReplayCLIRejectsArbitraryCommandByDefault(t *testing.T) {
 
 	if code := runReplay([]string{path}); code != 125 {
 		t.Fatalf("expected refusal exit code 125, got %d", code)
+	}
+}
+
+func TestReplayContextTimeout(t *testing.T) {
+	tests := []struct {
+		name         string
+		useV2        bool
+		wantDeadline bool
+	}{
+		{
+			name:         "v1 has 30 second timeout",
+			useV2:        false,
+			wantDeadline: true,
+		},
+		{
+			name:         "v2 has no global timeout",
+			useV2:        true,
+			wantDeadline: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start := time.Now()
+
+			ctx, cancel := replayContext(
+				context.Background(),
+				tt.useV2,
+			)
+			defer cancel()
+
+			deadline, ok := ctx.Deadline()
+
+			if ok != tt.wantDeadline {
+				t.Fatalf(
+					"deadline present = %t; want %t",
+					ok,
+					tt.wantDeadline,
+				)
+			}
+
+			if !tt.wantDeadline {
+				return
+			}
+
+			remaining := deadline.Sub(start)
+
+			if remaining < 29*time.Second ||
+				remaining > 31*time.Second {
+				t.Fatalf(
+					"unexpected v1 timeout: %s",
+					remaining,
+				)
+			}
+		})
 	}
 }
