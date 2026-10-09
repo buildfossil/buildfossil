@@ -67,6 +67,10 @@ func runWithSDKTimeout(
 		return 0, fmt.Errorf("docker SDK: empty container user")
 	}
 
+	runID, err := newRunID()
+	if err != nil {
+		return 0, err
+	}
 	dockerClient, err := NewSDKClient()
 	if err != nil {
 		return 0, err
@@ -87,9 +91,12 @@ func runWithSDKTimeout(
 	execCtx, cancelExec := context.WithTimeout(ctx, executionTimeout)
 	defer cancelExec()
 
+	createOptions := newSecureContainerOptions(workspace, argv, user)
+	createOptions.Config.Labels["org.buildfossil.run-id"] = runID
+
 	created, err := dockerClient.ContainerCreate(
 		execCtx,
-		newSecureContainerOptions(workspace, argv, user),
+		createOptions,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("docker SDK: create container: %w", err)
