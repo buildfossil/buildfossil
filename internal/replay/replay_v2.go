@@ -66,7 +66,7 @@ func RunV2WithOptions(
 
 	var stderr boundedOutput
 
-	code, err := docker.RunWithUser(
+	code, err := docker.RunWithSDK(
 		ctx,
 		workspace,
 		argv,
