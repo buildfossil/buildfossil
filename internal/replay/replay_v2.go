@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/buildfossil/buildfossil/internal/capsule"
 	"github.com/buildfossil/buildfossil/internal/runtime/docker"
@@ -41,6 +42,17 @@ func RunV2WithOptions(
 		)
 	}
 
+	uid := os.Geteuid()
+	gid := os.Getegid()
+
+	if uid == 0 {
+		return result, fmt.Errorf(
+			"replay: v2 refuses to run Docker as root",
+		)
+	}
+
+	containerUser := strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
+
 	argv := verified.Manifest.Execution.Argv
 
 	workspace, err := os.MkdirTemp("", "buildfossil-replay-v2-*")
@@ -55,10 +67,11 @@ func RunV2WithOptions(
 
 	var stderr boundedOutput
 
-	code, err := docker.Run(
+	code, err := docker.RunWithUser(
 		ctx,
 		workspace,
 		argv,
+		containerUser,
 		io.Discard,
 		io.MultiWriter(os.Stderr, &stderr),
 	)
