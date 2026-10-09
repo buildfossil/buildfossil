@@ -278,3 +278,57 @@ func TestRestoreWorkspaceV2RejectsSymlinkDestination(t *testing.T) {
 		t.Fatal("symlink destination caused unexpected writes")
 	}
 }
+
+func TestRestoreWorkspaceV2RejectsIntermediateSymlink(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+
+	if err := os.Symlink(outside, filepath.Join(root, "src")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	files := []WorkspaceFile{
+		{
+			Path: "src/main.go",
+			Data: []byte("package main\n"),
+			Mode: 0600,
+		},
+	}
+
+	manifest := Manifest{
+		SchemaVersion: SchemaVersionV2,
+		Execution: Execution{
+			Argv:       []string{"/bin/sh", "-c", "exit 23"},
+			WorkingDir: ".",
+			ExitCode:   23,
+		},
+		Platform: Platform{
+			OS:           "linux",
+			Architecture: "amd64",
+		},
+	}
+
+	var archive bytes.Buffer
+
+	if err := WriteWorkspaceV2(&archive, manifest, files); err != nil {
+		t.Fatalf("write capsule: %v", err)
+	}
+
+	capsulePath := filepath.Join(t.TempDir(), "test.bfc")
+	if err := os.WriteFile(capsulePath, archive.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	verified, err := ReadVerifiedV2(capsulePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := RestoreWorkspaceV2(root, verified); err == nil {
+		t.Fatal("expected restore to reject non-empty root")
+	}
+
+	if _, err := os.Stat(filepath.Join(outside, "main.go")); !os.IsNotExist(err) {
+		t.Fatalf("unexpected file outside workspace: %v", err)
+	}
+}

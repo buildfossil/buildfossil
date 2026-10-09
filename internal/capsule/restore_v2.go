@@ -3,7 +3,7 @@ package capsule
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 )
 
@@ -74,30 +74,80 @@ func RestoreWorkspaceV2(root string, verified VerifiedCapsuleV2) error {
 		return fmt.Errorf("capsule: restore directory must be empty")
 	}
 
-	for _, file := range verified.Files {
-		destination := filepath.Join(root, filepath.FromSlash(file.Path))
-		parent := filepath.Dir(destination)
+	workspaceRoot, err := os.OpenRoot(root)
+	if err != nil {
+		return fmt.Errorf("capsule: open restore root: %w", err)
+	}
+	defer workspaceRoot.Close()
 
-		if err := os.MkdirAll(parent, 0700); err != nil {
-			return fmt.Errorf("capsule: create directory: %w", err)
+	for _, file := range verified.Files {
+		parent := path.Dir(file.Path)
+
+		if parent != "." {
+			parts := strings.Split(parent, "/")
+			current := ""
+
+			for _, part := range parts {
+				if current == "" {
+					current = part
+				} else {
+					current += "/" + part
+				}
+
+				err := workspaceRoot.Mkdir(current, 0700)
+				if err != nil && !os.IsExist(err) {
+					return fmt.Errorf(
+						"capsule: create restore directory %q: %w",
+						current,
+						err,
+					)
+				}
+
+				info, err := workspaceRoot.Lstat(current)
+				if err != nil {
+					return fmt.Errorf(
+						"capsule: inspect restore directory: %w",
+						err,
+					)
+				}
+
+				if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+					return fmt.Errorf(
+						"capsule: invalid restore directory: %q",
+						current,
+					)
+				}
+			}
 		}
 
-		f, err := os.OpenFile(
-			destination,
+		f, err := workspaceRoot.OpenFile(
+			file.Path,
 			os.O_WRONLY|os.O_CREATE|os.O_EXCL,
 			0600,
 		)
 		if err != nil {
-			return fmt.Errorf("capsule: create restored file: %w", err)
+			return fmt.Errorf(
+				"capsule: create restored file %q: %w",
+				file.Path,
+				err,
+			)
 		}
 
 		if _, err := f.Write(file.Data); err != nil {
 			f.Close()
-			return fmt.Errorf("capsule: write restored file: %w", err)
+			return fmt.Errorf(
+				"capsule: write restored file %q: %w",
+				file.Path,
+				err,
+			)
 		}
 
 		if err := f.Close(); err != nil {
-			return fmt.Errorf("capsule: close restored file: %w", err)
+			return fmt.Errorf(
+				"capsule: close restored file %q: %w",
+				file.Path,
+				err,
+			)
 		}
 	}
 
