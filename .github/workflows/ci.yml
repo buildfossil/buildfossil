@@ -60,15 +60,9 @@ jobs:
           docker version
           docker info --format '{{.OSType}}/{{.Architecture}}'
 
-      - name: Prepare replay container image
+      - name: Inspect available Docker images
         run: |
-          docker pull --platform linux/amd64 \
-            public.ecr.aws/docker/library/alpine:3.20
-
-          docker tag \
-            public.ecr.aws/docker/library/alpine:3.20 \
-            alpine:3.20
-
+          docker image ls
           docker image inspect alpine:3.20 \
             --format '{{.Os}}/{{.Architecture}}'
 
