@@ -7,6 +7,8 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+const replayImage = "ghcr.io/buildfossil/replay-base@sha256:51ea5ed5cda2f1133ed5b0c07f7f26902e0ed7f9527671a3491525bbc080c944"
+
 func newSecureContainerOptions(
 	workspace string,
 	argv []string,
@@ -16,7 +18,7 @@ func newSecureContainerOptions(
 
 	return client.ContainerCreateOptions{
 		Config: &container.Config{
-			Image:        image,
+			Image:        replayImage,
 			User:         user,
 			Cmd:          argv,
 			WorkingDir:   "/workspace",

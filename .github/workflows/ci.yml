@@ -60,10 +60,13 @@ jobs:
           docker version
           docker info --format '{{.OSType}}/{{.Architecture}}'
 
-      - name: Inspect available Docker images
+      - name: Prepare BuildFossil replay image
         run: |
-          docker image ls
-          docker image inspect alpine:3.20 \
+          docker pull --platform linux/amd64 \
+            ghcr.io/buildfossil/replay-base@sha256:51ea5ed5cda2f1133ed5b0c07f7f26902e0ed7f9527671a3491525bbc080c944
+
+          docker image inspect \
+            ghcr.io/buildfossil/replay-base@sha256:51ea5ed5cda2f1133ed5b0c07f7f26902e0ed7f9527671a3491525bbc080c944 \
             --format '{{.Os}}/{{.Architecture}}'
 
       - name: Run Capture and Replay v2 E2E
