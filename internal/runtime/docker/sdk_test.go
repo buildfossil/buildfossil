@@ -3,7 +3,9 @@ package docker
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -272,5 +274,39 @@ func TestSDKRunStartFailure(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "docker SDK: start container:") {
 		t.Fatalf("unexpected error category: %v", err)
+	}
+}
+
+func TestSDKRunExecutionDeadline(t *testing.T) {
+	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+		t.Skip("Docker integration test disabled")
+	}
+
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		2*time.Second,
+	)
+	defer cancel()
+
+	workspace := t.TempDir()
+	user := fmt.Sprintf("%d:%d", os.Geteuid(), os.Getegid())
+
+	start := time.Now()
+
+	_, err := RunWithSDK(
+		ctx,
+		workspace,
+		[]string{"/bin/sh", "-c", "sleep 60"},
+		user,
+		io.Discard,
+		io.Discard,
+	)
+
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected deadline exceeded; got %v", err)
+	}
+
+	if elapsed := time.Since(start); elapsed > 8*time.Second {
+		t.Fatalf("execution cancellation took too long: %s", elapsed)
 	}
 }

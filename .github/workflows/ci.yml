@@ -86,3 +86,14 @@ jobs:
             echo "E2E test was unexpectedly skipped"
             exit 1
           fi
+
+      - name: Test Replay CLI SIGINT and cleanup
+        shell: bash
+        run: |
+          set -o pipefail
+          BUILDFOSSIL_DOCKER_TEST=1 go test \
+            -count=1 \
+            -v \
+            -timeout 90s \
+            ./cmd/buildfossil \
+            -run '^TestReplayCLISIGINT$'

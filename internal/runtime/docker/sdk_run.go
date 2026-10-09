@@ -52,9 +52,19 @@ func RunWithSDK(
 	}
 	defer dockerClient.Close()
 
-	if err := ensureReplayImage(ctx, dockerClient); err != nil {
-		return 0, fmt.Errorf("docker SDK: prepare replay image: %w", err)
+	prepareCtx, cancelPrepare := context.WithTimeout(ctx, 120*time.Second)
+
+	prepareErr := ensureReplayImage(prepareCtx, dockerClient)
+	cancelPrepare()
+
+	if prepareErr != nil {
+		return 0, fmt.Errorf("docker SDK: prepare replay image: %w", prepareErr)
 	}
+
+	// Separate execution timeout; image preparation time does not
+	// reduce the time available to the container process.
+	execCtx, cancelExec := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelExec()
 
 	created, err := dockerClient.ContainerCreate(
 		ctx,
@@ -161,7 +171,7 @@ func RunWithSDK(
 		attached.Close()
 		return 0, fmt.Errorf(
 			"docker SDK: execution canceled: %w",
-			ctx.Err(),
+			execCtx.Err(),
 		)
 	}
 
@@ -182,7 +192,7 @@ func RunWithSDK(
 		attached.Close()
 		return 0, fmt.Errorf(
 			"docker SDK: stream canceled: %w",
-			ctx.Err(),
+			execCtx.Err(),
 		)
 	}
 

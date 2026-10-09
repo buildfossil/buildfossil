@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
+	"os/signal"
 
 	"github.com/buildfossil/buildfossil/internal/replay"
 )
@@ -43,11 +43,11 @@ func runReplay(args []string) int {
 		return 2
 	}
 
-	ctx, cancel := context.WithTimeout(
+	ctx, stop := signal.NotifyContext(
 		context.Background(),
-		30*time.Second,
+		os.Interrupt,
 	)
-	defer cancel()
+	defer stop()
 
 	var result replay.Result
 	var err error
