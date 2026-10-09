@@ -5,7 +5,13 @@ import (
 	"fmt"
 )
 
-const SchemaVersion = 1
+const (
+	SchemaVersionV1 = 1
+	SchemaVersionV2 = 2
+
+	// SchemaVersion remains v1 until the v2 writer and reader are ready.
+	SchemaVersion = SchemaVersionV1
+)
 
 type Manifest struct {
 	SchemaVersion int       `json:"schema_version"`
@@ -40,7 +46,8 @@ type Platform struct {
 }
 
 func (m Manifest) Validate() error {
-	if m.SchemaVersion != SchemaVersion {
+	if m.SchemaVersion != SchemaVersionV1 &&
+		m.SchemaVersion != SchemaVersionV2 {
 		return errors.New("capsule: unsupported schema version")
 	}
 
@@ -56,8 +63,18 @@ func (m Manifest) Validate() error {
 		return errors.New("capsule: missing platform")
 	}
 
-	if err := m.Workspace.Validate(); err != nil {
-		return fmt.Errorf("capsule: invalid workspace: %w", err)
+	var workspaceErr error
+
+	switch m.SchemaVersion {
+	case SchemaVersionV1:
+		workspaceErr = m.Workspace.Validate()
+
+	case SchemaVersionV2:
+		workspaceErr = validateWorkspaceV2(m.Workspace)
+	}
+
+	if workspaceErr != nil {
+		return fmt.Errorf("capsule: invalid workspace: %w", workspaceErr)
 	}
 
 	return nil

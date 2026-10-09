@@ -17,6 +17,14 @@ type Result struct {
 }
 
 func Run(argv []string, stdout, stderr io.Writer) (Result, error) {
+	return RunInDir(argv, "", stdout, stderr)
+}
+
+func RunInDir(
+	argv []string,
+	dir string,
+	stdout, stderr io.Writer,
+) (Result, error) {
 	if len(argv) == 0 {
 		return Result{}, errors.New("execution: empty command")
 	}
@@ -25,6 +33,7 @@ func Run(argv []string, stdout, stderr io.Writer) (Result, error) {
 	stderrBuffer := newLimitedWriter(MaxCapturedOutput)
 
 	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd.Dir = dir
 	cmd.Stdout = io.MultiWriter(stdout, stdoutBuffer)
 	cmd.Stderr = io.MultiWriter(stderr, stderrBuffer)
 	cmd.Stdin = os.Stdin

@@ -28,3 +28,7 @@ coverage.html
 /.buildfossil-linux-capture*/
 # Local capture experiments
 /.buildfossil-capture-*/
+
+# Local BuildFossil integration experiments
+.buildfossil-linux-v2-capture/
+.buildfossil-permissions-test/

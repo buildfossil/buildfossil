@@ -40,3 +40,38 @@ jobs:
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
             go build -o buildfossil ./cmd/buildfossil
+
+  linux-e2e:
+    name: Linux Docker E2E
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Verify Docker availability
+        run: |
+          docker version
+          docker info --format '{{.OSType}}/{{.Architecture}}'
+
+      - name: Run Capture and Replay v2 E2E
+        shell: bash
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: |
+          set -o pipefail
+
+          go test -count=1 -v ./cmd/buildfossil \
+            -run '^TestCaptureReplayV2EndToEnd$' \
+            | tee /tmp/buildfossil-e2e.log
+
+          if grep -q -- '--- SKIP: TestCaptureReplayV2EndToEnd' /tmp/buildfossil-e2e.log; then
+            echo "E2E test was unexpectedly skipped"
+            exit 1
+          fi

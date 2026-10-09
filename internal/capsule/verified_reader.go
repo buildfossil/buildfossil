@@ -54,6 +54,12 @@ func ReadVerified(filename string) (VerifiedCapsule, error) {
 		return result, fmt.Errorf("capsule: decode manifest: %w", err)
 	}
 
+	if result.Manifest.SchemaVersion != SchemaVersionV1 {
+		return VerifiedCapsule{}, fmt.Errorf(
+			"capsule: expected schema version 1",
+		)
+	}
+
 	if err := result.Manifest.Validate(); err != nil {
 		return result, err
 	}
