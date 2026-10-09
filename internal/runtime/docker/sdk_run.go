@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -11,6 +12,21 @@ import (
 	"github.com/moby/moby/client"
 )
 
+func combineCleanupError(runErr, cleanupErr error, containerID string) error {
+	if cleanupErr == nil {
+		return runErr
+	}
+
+	return errors.Join(
+		runErr,
+		fmt.Errorf(
+			"docker SDK: remove container %s: %w",
+			containerID,
+			cleanupErr,
+		),
+	)
+}
+
 // RunWithSDK executes a command in an isolated Docker container.
 // stdout and stderr contain only the container process output.
 func RunWithSDK(
@@ -19,7 +35,7 @@ func RunWithSDK(
 	argv []string,
 	user string,
 	stdout, stderr io.Writer,
-) (int, error) {
+) (exitCode int, runErr error) {
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("docker SDK: empty command")
 	}
@@ -55,7 +71,7 @@ func RunWithSDK(
 		)
 		defer cancel()
 
-		_, _ = dockerClient.ContainerRemove(
+		_, cleanupErr := dockerClient.ContainerRemove(
 			cleanupCtx,
 			created.ID,
 			client.ContainerRemoveOptions{
@@ -63,6 +79,8 @@ func RunWithSDK(
 				RemoveVolumes: true,
 			},
 		)
+
+		runErr = combineCleanupError(runErr, cleanupErr, created.ID)
 	}()
 
 	attached, err := dockerClient.ContainerAttach(
@@ -119,8 +137,6 @@ func RunWithSDK(
 			Condition: container.WaitConditionNotRunning,
 		},
 	)
-
-	var exitCode int
 
 	select {
 	case response, ok := <-wait.Result:
