@@ -1,0 +1,25 @@
+# BuildFossil binaries
+/buildfossil
+/bin/
+
+# BuildFossil capsules
+*.bfc
+
+# Local experiments
+/fixture.txt
+/.buildfossil-lab/
+/.buildfossil-linux-capture/
+
+# Go test artifacts
+*.test
+*.prof
+coverage.out
+coverage.html
+
+# macOS
+.DS_Store
+
+# Editors
+.idea/
+.vscode/
+*.swp
