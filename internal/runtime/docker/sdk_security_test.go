@@ -67,6 +67,37 @@ func TestSDKContainerSecurityConfiguration(t *testing.T) {
 		t.Fatal("missing HostConfig")
 	}
 
+	if host.Privileged {
+		t.Error("container must not be privileged")
+	}
+
+	if string(host.UsernsMode) == "host" {
+		t.Error("container must not disable user namespace remapping")
+	}
+
+	if len(host.Devices) != 0 {
+		t.Errorf("unexpected host devices: %+v", host.Devices)
+	}
+
+	if len(host.Binds) != 0 {
+		t.Errorf("unexpected additional bind mounts: %+v", host.Binds)
+	}
+
+	if host.PidMode.IsHost() {
+		t.Error("container must not share host PID namespace")
+	}
+
+	if host.IpcMode.IsHost() {
+		t.Error("container must not share host IPC namespace")
+	}
+
+	if host.LogConfig.Type != "json-file" {
+		t.Errorf(
+			"log driver = %q; want json-file",
+			host.LogConfig.Type,
+		)
+	}
+
 	if host.LogConfig.Type != "json-file" {
 		t.Errorf(
 			"log driver = %q; want json-file",

@@ -105,7 +105,39 @@ func TestSDKRunSecurityRestrictions(t *testing.T) {
 				echo "FAIL: running as root"
 				exit 13
 			fi
-			echo "PASS: non-root user"`,
+			echo "PASS: non-root user"
+
+			if [ -e /var/run/docker.sock ]; then
+					echo "FAIL: Docker socket exposed"
+					exit 14
+			fi
+			echo "PASS: Docker socket not exposed"
+
+			if [ -e /run/containerd/containerd.sock ]; then
+					echo "FAIL: containerd socket exposed"
+					exit 15
+			fi
+			echo "PASS: containerd socket not exposed"
+
+			if [ ! -r /proc/net/dev ]; then
+					echo "FAIL: network device information unavailable"
+					exit 16
+			fi
+
+			echo "PASS: network namespace information available"
+
+			if [ -r /proc/net/route ] &&
+					awk 'NR > 1 && $2 == "00000000" { found=1 } END { exit !found }' /proc/net/route; then
+					echo "FAIL: default network route exists"
+					exit 17
+			fi
+			echo "PASS: no default network route"
+
+			if timeout 3 nc -z -w 2 1.1.1.1 443 >/dev/null 2>&1; then
+					echo "FAIL: outbound TCP connection succeeded"
+					exit 18
+			fi
+			echo "PASS: outbound TCP connection blocked"`,
 		},
 		fmt.Sprintf("%d:%d", os.Geteuid(), os.Getegid()),
 		&stdout,
@@ -126,7 +158,12 @@ func TestSDKRunSecurityRestrictions(t *testing.T) {
 
 	if !strings.Contains(stdout.String(), "PASS: root filesystem read-only") ||
 		!strings.Contains(stdout.String(), "PASS: workspace read-only") ||
-		!strings.Contains(stdout.String(), "PASS: non-root user") {
+		!strings.Contains(stdout.String(), "PASS: non-root user") ||
+		!strings.Contains(stdout.String(), "PASS: Docker socket not exposed") ||
+		!strings.Contains(stdout.String(), "PASS: containerd socket not exposed") ||
+		!strings.Contains(stdout.String(), "PASS: network namespace information available") ||
+		!strings.Contains(stdout.String(), "PASS: no default network route") ||
+		!strings.Contains(stdout.String(), "PASS: outbound TCP connection blocked") {
 		t.Fatalf("security diagnostics incomplete: %q", stdout.String())
 	}
 }

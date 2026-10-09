@@ -97,3 +97,17 @@ jobs:
             -timeout 90s \
             ./cmd/buildfossil \
             -run '^TestReplayCLISIGINT$'
+
+      - name: Test Docker sandbox security
+        shell: bash
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: |
+          set -o pipefail
+
+          go test \
+            -count=1 \
+            -v \
+            -timeout 90s \
+            ./internal/runtime/docker \
+            -run '^(TestSDKContainerSecurityConfiguration|TestSDKRunSecurityRestrictions)$'
