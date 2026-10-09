@@ -60,6 +60,9 @@ jobs:
           docker version
           docker info --format '{{.OSType}}/{{.Architecture}}'
 
+      - name: Prepare replay container image
+        run: docker pull alpine:3.20
+
       - name: Run Capture and Replay v2 E2E
         shell: bash
         env:
