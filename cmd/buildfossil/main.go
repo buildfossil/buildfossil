@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-
-	"github.com/buildfossil/buildfossil/internal/execution"
 )
 
 func main() {
@@ -35,13 +33,7 @@ func run(args []string) int {
 			return 2
 		}
 
-		result, err := execution.Run(args[2:], os.Stdout, os.Stderr)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "buildfossil: %v\n", err)
-			return 125
-		}
-
-		return result.ExitCode
+		return captureCommand(args[2:], "failure.bfc", false)
 
 	case "replay":
 		return runReplay(args[1:])
