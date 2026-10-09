@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -232,6 +233,12 @@ func TestCaptureReplayV2EndToEnd(t *testing.T) {
 	if result.OriginalExitCode != 23 ||
 		result.ReplayExitCode != 23 ||
 		result.Outcome != replay.OutcomeReproduced {
-		t.Fatalf("unexpected E2E result: %+v", result)
+		t.Fatalf(
+			"unexpected E2E result: %+v; captured stderr length=%d, sha256=%x, truncated=%t",
+			result,
+			len(verified.Manifest.Execution.Stderr),
+			sha256.Sum256([]byte(verified.Manifest.Execution.Stderr)),
+			verified.Manifest.Execution.StderrTruncated,
+		)
 	}
 }

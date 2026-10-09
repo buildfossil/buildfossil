@@ -2,6 +2,7 @@ package replay
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"os"
@@ -79,6 +80,15 @@ func RunV2WithOptions(
 		return result, fmt.Errorf("replay: Docker execution: %w", err)
 	}
 
+	fmt.Fprintf(
+		os.Stderr,
+		"DEBUG replay v2: original stderr=%q, replay stderr=%q, original truncated=%t, replay truncated=%t\n",
+		verified.Manifest.Execution.Stderr,
+		string(stderr.Bytes()),
+		verified.Manifest.Execution.StderrTruncated,
+		stderr.Truncated(),
+	)
+
 	outcome, err := CompareFailure(
 		verified.Manifest.Execution.ExitCode,
 		verified.Manifest.Execution.Stderr,
@@ -87,6 +97,24 @@ func RunV2WithOptions(
 		stderr.Bytes(),
 		stderr.Truncated(),
 	)
+	if outcome != OutcomeReproduced {
+		original := []byte(verified.Manifest.Execution.Stderr)
+		replayed := stderr.Bytes()
+
+		fmt.Fprintf(
+			os.Stderr,
+			"DEBUG replay comparison: original_len=%d original_sha256=%x original_truncated=%t replay_len=%d replay_sha256=%x replay_truncated=%t original_exit=%d replay_exit=%d outcome=%s\n",
+			len(original),
+			sha256.Sum256(original),
+			verified.Manifest.Execution.StderrTruncated,
+			len(replayed),
+			sha256.Sum256(replayed),
+			stderr.Truncated(),
+			verified.Manifest.Execution.ExitCode,
+			code,
+			outcome,
+		)
+	}
 	if err != nil {
 		return result, fmt.Errorf("replay: compare failure: %w", err)
 	}
