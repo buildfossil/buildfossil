@@ -122,3 +122,94 @@ func TestReplayRejectsUnsupportedPlatform(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestReplayRejectsArbitraryCommandByDefault(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "arbitrary.bfc")
+
+	m := capsule.Manifest{
+		SchemaVersion: 1,
+		Platform: capsule.Platform{
+			OS:           "linux",
+			Architecture: "amd64",
+		},
+		Execution: capsule.Execution{
+			Argv:       []string{"/bin/sh", "-c", "echo unexpected >&2; exit 23"},
+			WorkingDir: ".",
+			ExitCode:   23,
+			Stderr:     "unexpected\n",
+		},
+	}
+
+	err := capsule.WriteFile(
+		path,
+		m,
+		capsule.WorkspaceFile{
+			Path: "fixture.txt",
+			Data: []byte("fixture\n"),
+		},
+	)
+	if err != nil {
+		t.Fatalf("write capsule: %v", err)
+	}
+
+	_, err = Run(context.Background(), path)
+	if err == nil {
+		t.Fatal("expected arbitrary command to be rejected")
+	}
+
+	if !strings.Contains(err.Error(), "requires explicit opt-in") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestReplayArbitraryCommandIntegration(t *testing.T) {
+	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+		t.Skip("set BUILDFOSSIL_DOCKER_TEST=1 to run Docker tests")
+	}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "arbitrary.bfc")
+
+	m := capsule.Manifest{
+		SchemaVersion: 1,
+		Platform: capsule.Platform{
+			OS:           "linux",
+			Architecture: "amd64",
+		},
+		Execution: capsule.Execution{
+			Argv:       []string{"/bin/sh", "-c", "echo NEW_FAILURE >&2; exit 23"},
+			WorkingDir: ".",
+			ExitCode:   23,
+			Stderr:     "NEW_FAILURE\n",
+		},
+	}
+
+	err := capsule.WriteFile(
+		path,
+		m,
+		capsule.WorkspaceFile{
+			Path: "fixture.txt",
+			Data: []byte("fixture\n"),
+		},
+	)
+	if err != nil {
+		t.Fatalf("write capsule: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	result, err := RunWithOptions(ctx, path, Options{
+		AllowArbitraryCommand: true,
+	})
+	if err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+
+	if result.OriginalExitCode != 23 ||
+		result.ReplayExitCode != 23 ||
+		result.Outcome != OutcomeReproduced {
+		t.Fatalf("unexpected replay result: %+v", result)
+	}
+}

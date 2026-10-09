@@ -10,8 +10,26 @@ import (
 )
 
 func runReplay(args []string) int {
-	if len(args) != 1 {
-		fmt.Fprintln(os.Stderr, "Usage: buildfossil replay <capsule.bfc>")
+	const usage = "Usage: buildfossil replay [--allow-command] <capsule.bfc>"
+
+	var capsulePath string
+	var options replay.Options
+
+	switch {
+	case len(args) == 1 && args[0] != "--allow-command":
+		capsulePath = args[0]
+
+	case len(args) == 2 && args[0] == "--allow-command":
+		options.AllowArbitraryCommand = true
+		capsulePath = args[1]
+
+	default:
+		fmt.Fprintln(os.Stderr, usage)
+		return 2
+	}
+
+	if capsulePath == "" || capsulePath == "--allow-command" {
+		fmt.Fprintln(os.Stderr, usage)
 		return 2
 	}
 
@@ -21,7 +39,7 @@ func runReplay(args []string) int {
 	)
 	defer cancel()
 
-	result, err := replay.Run(ctx, args[0])
+	result, err := replay.RunWithOptions(ctx, capsulePath, options)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "buildfossil: %v\n", err)
 		return 125

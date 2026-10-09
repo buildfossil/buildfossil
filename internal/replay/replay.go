@@ -17,7 +17,19 @@ type Result struct {
 	Outcome          Outcome
 }
 
+type Options struct {
+	AllowArbitraryCommand bool
+}
+
 func Run(ctx context.Context, capsulePath string) (Result, error) {
+	return RunWithOptions(ctx, capsulePath, Options{})
+}
+
+func RunWithOptions(
+	ctx context.Context,
+	capsulePath string,
+	options Options,
+) (Result, error) {
 	var result Result
 
 	verified, err := capsule.ReadVerified(capsulePath)
@@ -35,13 +47,17 @@ func Run(ctx context.Context, capsulePath string) (Result, error) {
 		)
 	}
 
-	// Experimental replay supports exactly one known command.
 	argv := verified.Manifest.Execution.Argv
-	if len(argv) != 3 ||
-		argv[0] != "/bin/sh" ||
-		argv[1] != "-c" ||
-		argv[2] != "cat fixture.txt >&2; exit 17" {
-		return result, fmt.Errorf("replay: unsupported command")
+
+	if !options.AllowArbitraryCommand {
+		if len(argv) != 3 ||
+			argv[0] != "/bin/sh" ||
+			argv[1] != "-c" ||
+			argv[2] != "cat fixture.txt >&2; exit 17" {
+			return result, fmt.Errorf(
+				"replay: arbitrary command execution requires explicit opt-in",
+			)
+		}
 	}
 
 	workspace, err := os.MkdirTemp("", "buildfossil-replay-*")
