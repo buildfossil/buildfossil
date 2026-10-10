@@ -1,113 +1,287 @@
 # BuildFossil
 
-**Save a failed CI job. Reproduce it locally.**
+**Capture a failed Go build. Replay the failure offline.**
 
-BuildFossil is an experimental open-source CLI for capturing
-failed CI command executions into portable artifacts and
-replaying them locally inside Linux containers.
+BuildFossil is an experimental open-source CLI that packages a failed Go build, selected workspace files, and verified dependency artifacts into a portable `.bfc` capsule.
 
-> Status: Early engineering prototype. Not ready for production use.
+The capsule can then be replayed inside a constrained Linux Docker container without network access from the container.
 
-## Goal
+> **Status:** Experimental engineering prototype. Not production-ready.
 
-Help developers investigate CI-only failures without repeatedly
-pushing commits and waiting for pipelines.
+## Why BuildFossil?
 
-BuildFossil aims to capture enough execution context to attempt
-local reproduction of a failed command.
+A build can fail in one environment and be difficult to reproduce in another.
 
-Exact reproduction is not guaranteed.
+BuildFossil explores a different debugging workflow:
 
-## Current Capabilities
+1. Run a build through BuildFossil.
+2. Capture a failed execution and its required inputs.
+3. Transfer the resulting `.bfc` capsule.
+4. Verify the capsule and replay the build in Docker.
+5. Compare the original and replayed failure.
 
-The experimental prototype supports:
+The goal is to make certain build failures easier to investigate without repeatedly recreating the original environment.
 
-- Running a wrapped command and recording its exit code.
-- Capturing stdout and stderr with bounded buffers.
-- Creating a local `.bfc` archive containing a JSON manifest
-  and one controlled workspace fixture.
-- Recording workspace metadata and SHA-256 digests.
-- Validating the supported archive structure and file integrity.
-- Restoring the controlled workspace into a temporary directory.
-- Executing a fixed test command inside a Linux AMD64
-  Docker container.
-- Comparing exit codes and stderr for a deterministic failure.
+BuildFossil does not guarantee that every build failure can be reproduced.
 
-An end-to-end Linux container capture to macOS ARM64 Docker
-replay has been demonstrated with a synthetic failure.
+## Current Support
 
-## Limitations
+The schema-v3 prototype supports:
 
-The current implementation:
+- Go 1.26.6.
+- The exact command `go build ./...`.
+- One direct external Go module dependency.
+- Selected regular workspace files.
+- Go module `.zip`, `.mod`, and `.info` artifacts.
+- SHA-256 and Go module checksum verification.
+- Captured stdout, stderr, exit code, and build environment metadata.
+- Offline replay inside a Linux AMD64 Docker container.
+- Comparison of original and replayed failures.
+- An explicit opt-in for replaying captured commands.
 
-- Only supports a fixed experimental replay command.
-- Only captures one predefined workspace file.
-- Uses a fixed Docker image tag.
-- Does not support arbitrary CI jobs.
-- Does not yet integrate with GitHub Actions.
-- Does not guarantee secret-free capsules.
-- Does not authenticate capsule provenance.
-- Does not support untrusted capsules.
-- Does not provide complete filesystem or process snapshots.
-- Does not guarantee identical behavior across architectures.
+BuildFossil also retains older experimental capture/replay modes.
 
-The `.bfc` format is experimental and subject to change.
+The schema-v3 format is experimental and may change.
 
 ## Requirements
 
-For the current development prototype:
+For development and the supported schema-v3 workflow:
 
-- Go 1.26 or compatible toolchain.
-- Docker Engine with Linux containers.
+- Go 1.26.6.
+- Docker Engine or Docker Desktop with Linux containers.
 - Linux AMD64 container execution support.
+- Access to the pinned replay image when it is not already cached.
+
+Replay containers run without network access. The Docker host may still need network access to obtain the pinned image.
+
+## Install from Source
+
+Clone the repository and build the CLI:
+
+```sh
+git clone https://github.com/buildfossil/buildfossil.git
+cd buildfossil
+
+go build -o buildfossil ./cmd/buildfossil
+BUILDFOSSIL_BIN="$(pwd)/buildfossil"
+./buildfossil version
+```
+
+The current development version reports `buildfossil dev`.
+
+No stable release or binary distribution is provided yet.
+
+## Quick Start: Capture a Go Build Failure
+
+The following example creates a small Go project with one external dependency and an intentional compiler error.
+
+Create the project:
+
+```sh
+mkdir buildfossil-example
+cd buildfossil-example
+
+cat > go.mod <<'MOD'
+module example.com/buildfossil-example
+
+go 1.26.0
+
+require github.com/google/uuid v1.6.0
+MOD
+
+cat > main.go <<'GO'
+package main
+
+import (
+    "fmt"
+
+    "github.com/google/uuid"
+)
+
+func main() {
+    fmt.Println(uuid.NewString())
+    undefinedFunction()
+}
+GO
+```
+
+Download and verify the dependency before capture:
+
+```sh
+go mod download github.com/google/uuid@v1.6.0
+go mod download
+```
+
+Make sure `go.sum` contains both the module and its `/go.mod` checksum entries.
+
+For a portable Linux AMD64 build target, set:
+
+```sh
+export GOOS=linux
+export GOARCH=amd64
+export CGO_ENABLED=0
+export GOFLAGS=
+export GOTOOLCHAIN=local
+```
+
+Disable module proxy and checksum database access during capture:
+
+```sh
+export GOPROXY=off
+export GOSUMDB=off
+```
+
+Run the BuildFossil executable built in the previous step, replacing `"$BUILDFOSSIL_BIN"` with its actual absolute path:
+
+```sh
+/path/to/buildfossil capture --v3 \
+  --include go.mod \
+  --include go.sum \
+  --include main.go \
+  -- go build ./...
+```
+
+The build is expected to fail because `undefinedFunction` does not exist.
+
+BuildFossil saves `failure.bfc` in the current working directory when the failed build satisfies the supported capture requirements.
+
+A successfully captured compiler failure normally preserves the original nonzero build exit code.
+
+If capture itself fails, BuildFossil may exit with code `125` and will not produce a valid new capsule.
+
+## Replay the Failure
+
+Make the `.bfc` capsule available on a machine with a supported Docker environment.
+
+Run:
+
+```sh
+/path/to/buildfossil replay --v3 --allow-command failure.bfc
+```
+
+A successfully reproduced failure reports output similar to:
+
+```text
+Original exit code: 1
+Replay exit code:   1
+Outcome:            reproduced
+```
+
+`reproduced` means BuildFossil's current comparison logic considers the captured and replayed failures equivalent.
+
+It does not prove that every aspect of the original execution environment was reconstructed.
+
+**Only replay capsules from sources you trust.** The `--allow-command` option explicitly permits execution of the command recorded in the capsule.
+
+## What Is Inside a Capsule?
+
+A schema-v3 `.bfc` capsule contains:
+
+- A JSON manifest describing the captured execution.
+- Selected workspace files and their integrity metadata.
+- Captured build environment information.
+- A bounded set of Go module artifacts.
+- Recorded command output and exit status.
+
+The archive is checked before its contents are staged for replay.
+
+Integrity verification is not the same as authenticating who created a capsule.
+
+## Security
+
+BuildFossil replays commands from captured artifacts. It must not be treated as a safe executor for arbitrary, untrusted code.
+
+The replay implementation applies container restrictions, including disabled container networking, but Docker isolation is not a complete security boundary.
+
+Capsules may contain:
+
+- Source code and other included files.
+- Command arguments.
+- Build output and diagnostics.
+- Environment metadata.
+- Dependency artifacts.
+
+Do not capture confidential projects or production credentials without carefully reviewing the information that may be embedded in the capsule.
+
+A capsule can pass integrity checks without being trustworthy.
+
+## Known Limitations
+
+The current schema-v3 implementation:
+
+- Supports only the exact command `go build ./...`.
+- Requires Go 1.26.6.
+- Supports exactly one direct external Go module dependency.
+- Does not support arbitrary dependency graphs.
+- Does not support general-purpose CI job capture.
+- Requires workspace files to be explicitly included.
+- Does not create a complete filesystem or process snapshot.
+- Does not guarantee reproduction across all host and target platforms.
+- Does not authenticate capsule origin.
+- Is not approved for executing untrusted capsules.
+- Has unresolved security-hardening work, including staging race considerations.
+
+Replaying a captured failure can produce a different result or fail when the supported reproducibility assumptions are not met.
+
+## Tested Environments
+
+The GitHub Actions CI suite exercises:
+
+- Go unit tests and static analysis.
+- Linux AMD64 CLI compilation.
+- Docker offline replay integration tests.
+- macOS ARM64 Go capture.
+- Linux Docker replay of a schema-v3 capsule created on macOS ARM64.
+- Existing legacy capture/replay compatibility tests.
+
+The schema-v3 cross-platform CI scenario targets Linux AMD64 during capture, transfers the capsule between independent runners, and replays it on Linux AMD64.
+
+This does not establish general compatibility with every Go build target.
 
 ## Development
 
-Run unit tests:
+Run tests:
 
 ```sh
-go test ./...
+go test -count=1 ./...
 ```
 
-Run Docker integration tests:
+Run static analysis:
 
+```sh
+go vet ./...
 ```
-BUILDFOSSIL_DOCKER_TEST=1 go test ./...
+
+Run Docker integration tests with a working Docker daemon:
+
+```sh
+BUILDFOSSIL_DOCKER_TEST=1 go test -count=1 -timeout=8m ./...
 ```
 
 Build the CLI:
 
-```
+```sh
 go build -o buildfossil ./cmd/buildfossil
 ```
 
-Show the development version:
+## Project Status
 
-```
-./buildfossil version
-```
+BuildFossil is in active experimental development.
 
-## Security
+Before a public alpha release, the project requires additional security review, documentation, installation testing, and compatibility validation.
 
-Capsules may contain sensitive information, including command arguments, logs, environment details, and workspace files.
+The next priorities include:
 
-Do not use the current prototype with production credentials, confidential repositories, or untrusted capsule files.
+1. Documenting the threat model and trust boundaries.
+2. Hardening the replay staging and execution path.
+3. Expanding reproducibility tests.
+4. Improving failure diagnostics.
+5. Evaluating support for larger Go dependency graphs.
 
-Docker containers are not a complete security boundary for malicious workloads.
-
-## Roadmap
-
-The next engineering priorities are:
-
-1. Remove hardcoded replay fixtures.
-2. Define and validate reproducible execution environments.
-3. Strengthen archive handling and workspace isolation.
-4. Capture real Linux CI failures.
-5. Integrate with GitHub Actions.
-6. Validate cross-machine replay against real workloads.
+Features outside the documented supported scenarios should not be assumed to work.
 
 ## License
 
-BuildFossil is licensed under the Apache License, Version 2.0.
+Licensed under the Apache License, Version 2.0.
 
-See [LICENSE](LICENSE) for the full license text.
+See [LICENSE](LICENSE).
