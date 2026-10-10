@@ -111,3 +111,30 @@ jobs:
             -timeout 90s \
             ./internal/runtime/docker \
             -run '^(TestSDKContainerSecurityConfiguration|TestSDKRunSecurityRestrictions|TestSDKRunContainerHasRunID)$'
+
+      - name: Go runtime Docker E2E
+        shell: bash
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: |
+          set -euo pipefail
+
+          go test -count=1 -v -timeout 180s \
+            ./internal/runtime/docker \
+            -run '^TestSDKGoRuntimeBuildFailure$' \
+            | tee /tmp/buildfossil-go-runtime.log
+
+          if grep -q -- '--- SKIP: TestSDKGoRuntimeBuildFailure' /tmp/buildfossil-go-runtime.log; then
+            echo "Go runtime test was unexpectedly skipped"
+            exit 1
+          fi
+
+          go test -count=1 -v -timeout 180s \
+            ./internal/replay \
+            -run '^TestReplayV2GoBuildIntegration$' \
+            | tee /tmp/buildfossil-go-replay.log
+
+          if grep -q -- '--- SKIP: TestReplayV2GoBuildIntegration' /tmp/buildfossil-go-replay.log; then
+            echo "Go replay test was unexpectedly skipped"
+            exit 1
+          fi

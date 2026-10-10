@@ -64,15 +64,25 @@ func RunV2WithOptions(
 		return result, fmt.Errorf("replay: restore v2 workspace: %w", err)
 	}
 
+	var runtimeSpec *docker.RuntimeSpec
+
+	if verified.Manifest.Runtime != nil {
+		runtimeSpec = &docker.RuntimeSpec{
+			Kind:    verified.Manifest.Runtime.Kind,
+			Version: verified.Manifest.Runtime.Version,
+		}
+	}
+
 	var stderr boundedOutput
 
-	code, err := docker.RunWithSDK(
+	code, err := docker.RunWithSDKRuntime(
 		ctx,
 		workspace,
 		argv,
 		containerUser,
 		io.Discard,
 		&stderr,
+		runtimeSpec,
 	)
 	if err != nil {
 		return result, fmt.Errorf("replay: Docker execution: %w", err)

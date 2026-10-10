@@ -8,6 +8,7 @@ import (
 )
 
 const replayImage = "ghcr.io/buildfossil/replay-base@sha256:51ea5ed5cda2f1133ed5b0c07f7f26902e0ed7f9527671a3491525bbc080c944"
+const goReplayImage = "docker.io/library/golang@sha256:1a9c10cf505a9e6b1e96ea77ebdbfe79a0f10380181faf88bc3b51d7e4315fae"
 
 func newSecureContainerOptions(
 	workspace string,

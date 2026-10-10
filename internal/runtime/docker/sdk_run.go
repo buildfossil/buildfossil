@@ -29,8 +29,7 @@ func combineCleanupError(runErr, cleanupErr error, containerID string) error {
 
 const defaultExecutionTimeout = 30 * time.Second
 
-// RunWithSDK executes a command in an isolated Docker container.
-// stdout and stderr contain only the container process output.
+// RunWithSDK executes a command using the legacy Alpine runtime.
 func RunWithSDK(
 	ctx context.Context,
 	workspace string,
@@ -38,7 +37,7 @@ func RunWithSDK(
 	user string,
 	stdout, stderr io.Writer,
 ) (int, error) {
-	return runWithSDKTimeout(
+	return runWithSDKOptions(
 		ctx,
 		workspace,
 		argv,
@@ -46,6 +45,28 @@ func RunWithSDK(
 		stdout,
 		stderr,
 		defaultExecutionTimeout,
+		nil,
+	)
+}
+
+// RunWithSDKRuntime executes a command using an allowlisted runtime.
+func RunWithSDKRuntime(
+	ctx context.Context,
+	workspace string,
+	argv []string,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+) (int, error) {
+	return runWithSDKOptions(
+		ctx,
+		workspace,
+		argv,
+		user,
+		stdout,
+		stderr,
+		defaultExecutionTimeout,
+		runtime,
 	)
 }
 
@@ -56,6 +77,27 @@ func runWithSDKTimeout(
 	user string,
 	stdout, stderr io.Writer,
 	executionTimeout time.Duration,
+) (int, error) {
+	return runWithSDKOptions(
+		ctx,
+		workspace,
+		argv,
+		user,
+		stdout,
+		stderr,
+		executionTimeout,
+		nil,
+	)
+}
+
+func runWithSDKOptions(
+	ctx context.Context,
+	workspace string,
+	argv []string,
+	user string,
+	stdout, stderr io.Writer,
+	executionTimeout time.Duration,
+	runtime *RuntimeSpec,
 ) (exitCode int, runErr error) {
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("docker SDK: empty command")
@@ -65,6 +107,11 @@ func runWithSDKTimeout(
 	}
 	if user == "" {
 		return 0, fmt.Errorf("docker SDK: empty container user")
+	}
+
+	image, err := selectReplayImage(runtime)
+	if err != nil {
+		return 0, err
 	}
 
 	runID, err := newRunID()
@@ -79,7 +126,7 @@ func runWithSDKTimeout(
 
 	prepareCtx, cancelPrepare := context.WithTimeout(ctx, 120*time.Second)
 
-	prepareErr := ensureReplayImage(prepareCtx, dockerClient)
+	prepareErr := ensureReplayImage(prepareCtx, dockerClient, image)
 	cancelPrepare()
 
 	if prepareErr != nil {
@@ -92,7 +139,25 @@ func runWithSDKTimeout(
 	defer cancelExec()
 
 	createOptions := newSecureContainerOptions(workspace, argv, user)
+	createOptions.Config.Image = image
 	createOptions.Config.Labels["org.buildfossil.run-id"] = runID
+
+	if runtime != nil && runtime.Kind == "go" {
+		createOptions.Config.Env = []string{
+			"PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+			"TMPDIR=/tmp",
+			"GOCACHE=/gocache",
+			"GOTOOLCHAIN=local",
+			"GOPROXY=off",
+			"GOSUMDB=off",
+			"CGO_ENABLED=0",
+		}
+
+		createOptions.HostConfig.Tmpfs = map[string]string{
+			"/tmp":     "rw,nosuid,nodev,size=64m,mode=1777",
+			"/gocache": "rw,nosuid,nodev,size=64m,mode=1777",
+		}
+	}
 
 	created, err := dockerClient.ContainerCreate(
 		execCtx,

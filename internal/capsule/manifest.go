@@ -18,6 +18,7 @@ type Manifest struct {
 	Execution     Execution `json:"execution"`
 	Platform      Platform  `json:"platform"`
 	Workspace     Workspace `json:"workspace"`
+	Runtime       *Runtime  `json:"runtime,omitempty"`
 }
 
 type Workspace struct {
@@ -45,6 +46,11 @@ type Platform struct {
 	Architecture string `json:"architecture"`
 }
 
+type Runtime struct {
+	Kind    string `json:"kind"`
+	Version string `json:"version"`
+}
+
 func (m Manifest) Validate() error {
 	if m.SchemaVersion != SchemaVersionV1 &&
 		m.SchemaVersion != SchemaVersionV2 {
@@ -61,6 +67,16 @@ func (m Manifest) Validate() error {
 
 	if m.Platform.OS == "" || m.Platform.Architecture == "" {
 		return errors.New("capsule: missing platform")
+	}
+
+	if m.Runtime != nil {
+		if m.SchemaVersion != SchemaVersionV2 {
+			return errors.New("capsule: runtime requires schema version 2")
+		}
+
+		if err := m.Runtime.Validate(); err != nil {
+			return err
+		}
 	}
 
 	var workspaceErr error

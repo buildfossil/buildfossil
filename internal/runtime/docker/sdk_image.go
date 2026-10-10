@@ -11,8 +11,12 @@ import (
 
 // ensureReplayImage makes the pinned replay image available locally.
 // Registry operations are kept separate from container stderr.
-func ensureReplayImage(ctx context.Context, dockerClient *client.Client) error {
-	_, err := dockerClient.ImageInspect(ctx, replayImage)
+func ensureReplayImage(
+	ctx context.Context,
+	dockerClient *client.Client,
+	image string,
+) error {
+	_, err := dockerClient.ImageInspect(ctx, image)
 	if err == nil {
 		return nil
 	}
@@ -23,7 +27,7 @@ func ensureReplayImage(ctx context.Context, dockerClient *client.Client) error {
 
 	pull, err := dockerClient.ImagePull(
 		ctx,
-		replayImage,
+		image,
 		client.ImagePullOptions{
 			Platforms: []ocispec.Platform{
 				{
@@ -44,7 +48,7 @@ func ensureReplayImage(ctx context.Context, dockerClient *client.Client) error {
 
 	// Verify that Docker Engine can resolve the pinned image
 	// after downloading it.
-	if _, err := dockerClient.ImageInspect(ctx, replayImage); err != nil {
+	if _, err := dockerClient.ImageInspect(ctx, image); err != nil {
 		return fmt.Errorf("docker SDK: verify pulled image: %w", err)
 	}
 
