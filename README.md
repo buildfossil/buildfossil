@@ -1,6 +1,17 @@
-# BuildFossil
 
-**Capture a failed Go build. Replay the failure offline.**
+<p align="center">
+  <img src="assets/brand/logo.svg" alt="BuildFossil" width="340">
+</p>
+
+<p align="center">
+  <strong>Capture a failed Go build. Replay the failure offline.</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/status-experimental-orange" alt="Experimental">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="Apache 2.0">
+  <img src="https://img.shields.io/badge/open%20source-yes-brightgreen" alt="Open Source">
+</p>
 
 BuildFossil is an experimental open-source CLI that packages a failed Go build, selected workspace files, and verified dependency artifacts into a portable `.bfc` capsule.
 
