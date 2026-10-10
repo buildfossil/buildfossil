@@ -302,7 +302,7 @@ BuildFossil welcomes early contributors interested in Go, DevOps, build reproduc
 
 Contributions can include bug reports, tests, documentation, code improvements, and technical discussions.
 
-Check the open Issues for `good first issue` and `help wanted` tasks.
+Looking for a place to start? Explore our [open issues](https://github.com/buildfossil/buildfossil/issues), especially those labeled `good first issue` or `help wanted`.
 
 For larger changes, please open an Issue to discuss the approach before submitting a Pull Request.
 
