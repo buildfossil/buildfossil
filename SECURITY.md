@@ -17,8 +17,9 @@ It includes:
 - Archive structure and metadata validation.
 - SHA-256 verification of captured workspace files and dependency artifacts.
 - Go module ZIP and go.sum checksum verification.
-- Restricted workspace restoration.
-- Validation of staged workspace contents.
+- Construction of verified in-memory workspace and module-cache snapshots.
+- Docker-managed snapshot volumes mounted read-only for execution.
+- No host workspace bind mounts in the active schema-v3 replay path.
 - Explicit authorization through `--allow-command`.
 - Docker-based execution with restricted privileges.
 - Disabled container networking.
@@ -26,6 +27,7 @@ It includes:
 - Reduced Linux capabilities.
 - Resource limits and execution timeouts.
 - Cleanup of temporary execution containers.
+- Best-effort cleanup of Docker snapshot volumes and preparation containers.
 
 These controls reduce specific risks. They do not establish complete isolation or prove the absence of vulnerabilities.
 
@@ -47,8 +49,8 @@ The primary assets are:
 BuildFossil crosses several trust boundaries:
 
 1. **Capture host to capsule:** selected files, command metadata, and diagnostic output are serialized into a `.bfc` archive.
-2. **Capsule to replay host:** archive contents are parsed, checked, and restored into temporary directories.
-3. **Replay host to Docker:** staged workspace and dependency data are provided to a container.
+2. **Capsule to replay process:** archive contents are parsed and verified, then serialized into in-memory TAR snapshots.
+3. **Replay process to Docker:** verified snapshots are uploaded into Docker-managed volumes and mounted read-only in the execution container.
 4. **Container to host kernel:** containerized code executes using the host's container runtime and kernel interfaces.
 
 Each boundary requires independent security consideration.
@@ -111,17 +113,33 @@ Important limitations:
 
 Do not use BuildFossil as a sandbox for hostile code.
 
-## Host Filesystem and Staging
+## Host Filesystem and Replay Snapshots
 
-BuildFossil restores captured workspace files into temporary staging directories and validates their contents before execution.
+The active schema-v3 replay path constructs workspace and module-cache
+TAR snapshots from verified capsule data held in memory.
 
-The implementation includes checks against unexpected file types, extra files, and changes to expected contents.
+These snapshots are uploaded into Docker-managed volumes rather than
+being restored into host staging directories for execution.
 
-A remaining hardening concern is the time between staging verification and Docker consuming the staged directories.
+The execution container mounts both volumes read-only and does not
+inherit host workspace bind mounts.
 
-Concurrent filesystem changes during this interval may not be fully prevented by current checks.
+This removes the previous host-staging filesystem race between
+verification and Docker consumption.
 
-This TOCTOU risk remains unresolved and must be reviewed before stronger security claims can be made.
+However, snapshot volumes are not absolutely immutable. The Docker
+daemon and sufficiently privileged actors may modify them.
+
+Resource cleanup is best-effort. Docker API failures, daemon
+unavailability, or unexpected process termination may leave resources
+that require manual inspection.
+
+The snapshot architecture does not provide protection against
+compromised Docker infrastructure, host-kernel vulnerabilities,
+or malicious source code with valid checksums.
+
+See [Replay Snapshot Security Model](docs/security-model.md) for
+implementation details and remaining limitations.
 
 ## Dependency Handling
 
@@ -129,7 +147,9 @@ Schema-v3 currently supports exactly one direct external Go module dependency.
 
 Dependency artifacts are captured from the Go module cache and checked against expected metadata and checksums.
 
-Replay uses staged dependency artifacts to prepare an offline Go module cache.
+Replay packages verified dependency artifacts into a module-cache snapshot.
+The execution container copies these artifacts from a read-only Docker
+volume into writable tmpfs and performs Go module preparation offline.
 
 Limitations include:
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/buildfossil/buildfossil/internal/capsule"
@@ -57,52 +56,28 @@ func RunV3WithOptions(
 
 	containerUser := strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
 
-	replayRoot, err := os.MkdirTemp("", "buildfossil-replay-v3-*")
+	workspaceTAR, err := capsule.BuildWorkspaceSnapshotV3(verified)
 	if err != nil {
-		return result, fmt.Errorf("replay: create temporary directory: %w", err)
-	}
-	defer os.RemoveAll(replayRoot)
-
-	workspace := filepath.Join(replayRoot, "workspace")
-	artifacts := filepath.Join(replayRoot, "module-artifacts")
-	cacheRoot := filepath.Join(replayRoot, "module-cache")
-
-	for _, path := range []string{workspace, artifacts, cacheRoot} {
-		if err := os.Mkdir(path, 0700); err != nil {
-			return result, fmt.Errorf("replay: create staging directory: %w", err)
-		}
-	}
-
-	if err := capsule.RestoreWorkspaceV3(
-		workspace,
-		artifacts,
-		verified,
-	); err != nil {
-		return result, fmt.Errorf("replay: restore workspace: %w", err)
-	}
-
-	if err := capsule.PrepareGoModuleCacheV3(
-		cacheRoot,
-		verified,
-	); err != nil {
-		return result, fmt.Errorf("replay: prepare offline cache: %w", err)
-	}
-
-	if err := capsule.VerifyStagedWorkspaceV3(
-		workspace,
-		verified.Manifest,
-	); err != nil {
 		return result, fmt.Errorf(
-			"replay: verify staged workspace: %w",
+			"replay: build verified workspace snapshot: %w",
+			err,
+		)
+	}
+
+	moduleTAR, err := capsule.BuildGoModuleSnapshotV3(verified)
+	if err != nil {
+		return result, fmt.Errorf(
+			"replay: build verified Go module snapshot: %w",
 			err,
 		)
 	}
 
 	var stderr boundedOutput
 
-	code, err := docker.RunWithSDKRuntimeOfflineExec(
+	code, err := docker.RunWithSDKRuntimeSnapshotExec(
 		ctx,
-		workspace,
+		workspaceTAR,
+		moduleTAR,
 		verified.Manifest.Execution.Argv,
 		containerUser,
 		io.Discard,
@@ -111,7 +86,6 @@ func RunV3WithOptions(
 			Kind:    verified.Manifest.Runtime.Kind,
 			Version: verified.Manifest.Runtime.Version,
 		},
-		cacheRoot,
 	)
 	if err != nil {
 		return result, fmt.Errorf("replay: offline Docker execution: %w", err)

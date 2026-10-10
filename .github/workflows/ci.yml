@@ -197,6 +197,22 @@ jobs:
             exit 1
           fi
 
+      - name: Schema v3 Snapshot Docker E2E
+        shell: bash
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: |
+          set -euo pipefail
+
+          go test -count=1 -v -timeout 8m \
+            ./internal/runtime/docker \
+            -run '^(TestSnapshotVolumes.*|TestSnapshotExecutorEndToEnd|TestSnapshotOfflineGoBuild)$' \
+            | tee "$RUNNER_TEMP/buildfossil-v3-snapshot.log"
+
+          if grep -q -- '--- SKIP:' "$RUNNER_TEMP/buildfossil-v3-snapshot.log"; then
+            echo "Snapshot Docker tests were unexpectedly skipped"
+            exit 1
+          fi
 
   macos-capture:
     name: macOS ARM64 Go Capture
