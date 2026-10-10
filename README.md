@@ -221,6 +221,8 @@ Do not capture confidential projects or production credentials without carefully
 
 A capsule can pass integrity checks without being trustworthy.
 
+For the schema-v3 staging trust assumptions and remaining TOCTOU concerns, see [Replay Staging Security Model](docs/security-model.md).
+
 ## Known Limitations
 
 The current schema-v3 implementation:
