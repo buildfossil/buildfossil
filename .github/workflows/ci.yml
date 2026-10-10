@@ -138,3 +138,21 @@ jobs:
             echo "Go replay test was unexpectedly skipped"
             exit 1
           fi
+
+      - name: Go Capture to Replay E2E
+        shell: bash
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: |
+          set -euo pipefail
+
+          go test -count=1 -v -timeout 180s \
+            ./cmd/buildfossil \
+            -run '^TestCaptureReplayGoBuildEndToEnd$' \
+            | tee /tmp/buildfossil-go-capture-e2e.log
+
+          if ! grep -q -- '--- PASS: TestCaptureReplayGoBuildEndToEnd' \
+            /tmp/buildfossil-go-capture-e2e.log; then
+            echo "Go Capture/Replay E2E did not pass"
+            exit 1
+          fi

@@ -49,6 +49,10 @@ func captureCommandV2(
 
 	manifest := capsule.Manifest{
 		SchemaVersion: capsule.SchemaVersionV2,
+		Runtime: capsule.DetectRuntime(
+			argv,
+			workspaceRoot,
+		),
 		Execution: capsule.Execution{
 			Argv:            result.Argv,
 			WorkingDir:      ".",
