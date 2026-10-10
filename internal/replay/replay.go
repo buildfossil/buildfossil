@@ -15,10 +15,15 @@ type Result struct {
 	OriginalExitCode int
 	ReplayExitCode   int
 	Outcome          Outcome
+
+	// GoDependencies contains optional replay environment diagnostics.
+	// It does not affect Outcome.
+	GoDependencies *capsule.GoDependencyStatus
 }
 
 type Options struct {
 	AllowArbitraryCommand bool
+	DiagnoseDependencies  bool
 }
 
 func Run(ctx context.Context, capsulePath string) (Result, error) {

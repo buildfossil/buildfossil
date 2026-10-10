@@ -112,9 +112,22 @@ func RunV2WithOptions(
 		return result, fmt.Errorf("replay: compare failure: %w", err)
 	}
 
-	return Result{
+	result = Result{
 		OriginalExitCode: verified.Manifest.Execution.ExitCode,
 		ReplayExitCode:   code,
 		Outcome:          outcome,
-	}, nil
+	}
+
+	if options.DiagnoseDependencies && shouldProbeGoDependencies(verified.Manifest) {
+		status := probeGoDependencies(
+			ctx,
+			workspace,
+			containerUser,
+			verified.Manifest,
+		)
+
+		result = attachGoDependencyDiagnostics(result, status)
+	}
+
+	return result, nil
 }

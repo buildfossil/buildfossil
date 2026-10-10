@@ -14,12 +14,13 @@ const (
 )
 
 type Manifest struct {
-	SchemaVersion int                 `json:"schema_version"`
-	Execution     Execution           `json:"execution"`
-	Platform      Platform            `json:"platform"`
-	Workspace     Workspace           `json:"workspace"`
-	Runtime       *Runtime            `json:"runtime,omitempty"`
-	GoBuildEnv    *GoBuildEnvironment `json:"go_build_env,omitempty"`
+	SchemaVersion  int                 `json:"schema_version"`
+	Execution      Execution           `json:"execution"`
+	Platform       Platform            `json:"platform"`
+	Workspace      Workspace           `json:"workspace"`
+	Runtime        *Runtime            `json:"runtime,omitempty"`
+	GoBuildEnv     *GoBuildEnvironment `json:"go_build_env,omitempty"`
+	GoDependencies *GoDependencyStatus `json:"go_dependencies,omitempty"`
 }
 
 type Workspace struct {
@@ -95,6 +96,26 @@ func (m Manifest) Validate() error {
 			m.GoBuildEnv.GOARCH == "" ||
 			(m.GoBuildEnv.CGOEnabled != "0" && m.GoBuildEnv.CGOEnabled != "1") {
 			return errors.New("capsule: invalid Go build environment")
+		}
+	}
+
+	if m.GoDependencies != nil {
+		if m.SchemaVersion != SchemaVersionV2 {
+			return errors.New(
+				"capsule: Go dependency status requires schema version 2",
+			)
+		}
+
+		if m.Runtime == nil ||
+			m.Runtime.Kind != "go" ||
+			m.Runtime.Version != SupportedGoVersion {
+			return errors.New(
+				"capsule: Go dependency status requires supported Go runtime",
+			)
+		}
+
+		if err := m.GoDependencies.Validate(); err != nil {
+			return err
 		}
 	}
 

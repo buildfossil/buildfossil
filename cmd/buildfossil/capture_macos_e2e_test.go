@@ -98,5 +98,59 @@ func TestCaptureReplayMacOSGoEndToEnd(t *testing.T) {
 		)
 	}
 
+	// Regular replay must not collect dependency diagnostics.
+	if result.GoDependencies != nil {
+		t.Fatal("dependency diagnostics unexpectedly enabled")
+	}
+
+	// Repeat replay with dependency diagnostics enabled.
+	diagnosed, err := replay.RunV2WithOptions(
+		ctx,
+		capsulePath,
+		replay.Options{
+			AllowArbitraryCommand: true,
+			DiagnoseDependencies:  true,
+		},
+	)
+	if err != nil {
+		t.Fatalf("macOS replay with diagnostics: %v", err)
+	}
+
+	if diagnosed.Outcome != result.Outcome {
+		t.Fatalf(
+			"diagnostics changed outcome: %q -> %q",
+			result.Outcome,
+			diagnosed.Outcome,
+		)
+	}
+
+	if diagnosed.OriginalExitCode != result.OriginalExitCode ||
+		diagnosed.ReplayExitCode != result.ReplayExitCode {
+		t.Fatalf(
+			"diagnostics changed exit codes: original=%d/%d replay=%d/%d",
+			result.OriginalExitCode,
+			diagnosed.OriginalExitCode,
+			result.ReplayExitCode,
+			diagnosed.ReplayExitCode,
+		)
+	}
+
+	if diagnosed.GoDependencies == nil {
+		t.Fatal("missing Go dependency diagnostics")
+	}
+
+	if diagnosed.GoDependencies.State != capsule.GoDependenciesReady {
+		t.Fatalf(
+			"dependency state = %q, want ready (reason: %s)",
+			diagnosed.GoDependencies.State,
+			diagnosed.GoDependencies.Reason,
+		)
+	}
+
+	t.Logf(
+		"macOS Go dependency diagnostics: %s",
+		diagnosed.GoDependencies.State,
+	)
+
 	t.Logf("macOS → Linux Docker outcome: %s", result.Outcome)
 }

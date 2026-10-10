@@ -18,6 +18,49 @@ func TestReplayInvalidArguments(t *testing.T) {
 		{name: "flag without path", args: []string{"--allow-command"}},
 		{name: "duplicate flag", args: []string{"--allow-command", "--allow-command"}},
 		{name: "too many arguments", args: []string{"first.bfc", "second.bfc"}},
+		{
+			name: "diagnostics without v2",
+			args: []string{
+				"--allow-command",
+				"--diagnose-dependencies",
+				"failure.bfc",
+			},
+		},
+		{
+			name: "diagnostics without allow-command",
+			args: []string{
+				"--v2",
+				"--diagnose-dependencies",
+				"failure.bfc",
+			},
+		},
+		{
+			name: "diagnostics missing capsule",
+			args: []string{
+				"--v2",
+				"--allow-command",
+				"--diagnose-dependencies",
+			},
+		},
+		{
+			name: "diagnostics wrong flag order",
+			args: []string{
+				"--diagnose-dependencies",
+				"--v2",
+				"--allow-command",
+				"failure.bfc",
+			},
+		},
+		{
+			name: "diagnostics duplicate flag",
+			args: []string{
+				"--v2",
+				"--allow-command",
+				"--diagnose-dependencies",
+				"--diagnose-dependencies",
+				"failure.bfc",
+			},
+		},
 	}
 
 	for _, tt := range tests {

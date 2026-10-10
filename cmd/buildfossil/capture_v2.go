@@ -68,6 +68,15 @@ func captureCommandV2(
 		return 125
 	}
 
+	var goDependencies *capsule.GoDependencyStatus
+
+	if detectedRuntime != nil && detectedRuntime.Kind == "go" {
+		goDependencies = &capsule.GoDependencyStatus{
+			State:  capsule.GoDependenciesUnknown,
+			Reason: "dependency availability was not verified during capture",
+		}
+	}
+
 	manifest := capsule.Manifest{
 		SchemaVersion: capsule.SchemaVersionV2,
 		Runtime:       detectedRuntime,
@@ -85,6 +94,7 @@ func captureCommandV2(
 			OS:           runtime.GOOS,
 			Architecture: runtime.GOARCH,
 		},
+		GoDependencies: goDependencies,
 	}
 
 	// Construct the complete archive before creating the output file.

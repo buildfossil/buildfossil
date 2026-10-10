@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/buildfossil/buildfossil/internal/replay"
@@ -22,7 +23,9 @@ func replayContext(
 }
 
 func runReplay(args []string) int {
-	const usage = "Usage: buildfossil replay [--v2] [--allow-command] <capsule.bfc>"
+	const usage = "Usage:\n" +
+		"  buildfossil replay [--allow-command] <capsule.bfc>\n" +
+		"  buildfossil replay --v2 --allow-command [--diagnose-dependencies] <capsule.bfc>"
 
 	var capsulePath string
 	var options replay.Options
@@ -43,14 +46,21 @@ func runReplay(args []string) int {
 		options.AllowArbitraryCommand = true
 		capsulePath = args[2]
 
+	case len(args) == 4 &&
+		args[0] == "--v2" &&
+		args[1] == "--allow-command" &&
+		args[2] == "--diagnose-dependencies":
+		useV2 = true
+		options.AllowArbitraryCommand = true
+		options.DiagnoseDependencies = true
+		capsulePath = args[3]
+
 	default:
 		fmt.Fprintln(os.Stderr, usage)
 		return 2
 	}
 
-	if capsulePath == "" ||
-		capsulePath == "--allow-command" ||
-		capsulePath == "--v2" {
+	if capsulePath == "" || strings.HasPrefix(capsulePath, "--") {
 		fmt.Fprintln(os.Stderr, usage)
 		return 2
 	}
@@ -80,6 +90,14 @@ func runReplay(args []string) int {
 	fmt.Printf("Original exit code: %d\n", result.OriginalExitCode)
 	fmt.Printf("Replay exit code:   %d\n", result.ReplayExitCode)
 	fmt.Printf("Outcome:            %s\n", result.Outcome)
+
+	if result.GoDependencies != nil {
+		fmt.Printf("Go dependencies:    %s\n", result.GoDependencies.State)
+
+		if result.GoDependencies.Reason != "" {
+			fmt.Printf("Dependency details: %s\n", result.GoDependencies.Reason)
+		}
+	}
 
 	switch result.Outcome {
 	case replay.OutcomeReproduced:

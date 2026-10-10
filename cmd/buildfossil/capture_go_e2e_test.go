@@ -108,5 +108,53 @@ func TestCaptureReplayGoBuildEndToEnd(t *testing.T) {
 		)
 	}
 
+	// Ordinary replay must not run dependency diagnostics.
+	if result.GoDependencies != nil {
+		t.Fatal("dependency diagnostics unexpectedly enabled")
+	}
+
+	diagnosed, err := replay.RunV2WithOptions(
+		ctx,
+		capsulePath,
+		replay.Options{
+			AllowArbitraryCommand: true,
+			DiagnoseDependencies:  true,
+		},
+	)
+	if err != nil {
+		t.Fatalf("Go replay with diagnostics failed: %v", err)
+	}
+
+	if diagnosed.Outcome != result.Outcome {
+		t.Fatalf(
+			"diagnostics changed outcome: %q -> %q",
+			result.Outcome,
+			diagnosed.Outcome,
+		)
+	}
+
+	if diagnosed.OriginalExitCode != result.OriginalExitCode ||
+		diagnosed.ReplayExitCode != result.ReplayExitCode {
+		t.Fatalf(
+			"diagnostics changed exit codes: original=%d/%d replay=%d/%d",
+			result.OriginalExitCode,
+			diagnosed.OriginalExitCode,
+			result.ReplayExitCode,
+			diagnosed.ReplayExitCode,
+		)
+	}
+
+	if diagnosed.GoDependencies == nil {
+		t.Fatal("Go dependency diagnostics missing")
+	}
+
+	if diagnosed.GoDependencies.State != capsule.GoDependenciesReady {
+		t.Fatalf(
+			"Go dependency state = %q, want ready (reason: %s)",
+			diagnosed.GoDependencies.State,
+			diagnosed.GoDependencies.Reason,
+		)
+	}
+
 	t.Logf("Capture → Replay outcome: %s", result.Outcome)
 }

@@ -83,6 +83,22 @@ func TestCaptureV2DetectsGoRuntime(t *testing.T) {
 
 	goEnv := verified.Manifest.GoBuildEnv
 
+	if verified.Manifest.GoDependencies == nil {
+		t.Fatal("Go dependency status missing from captured manifest")
+	}
+
+	if got := verified.Manifest.GoDependencies.State; got != capsule.GoDependenciesUnknown {
+		t.Fatalf(
+			"Go dependency state = %q, want %q",
+			got,
+			capsule.GoDependenciesUnknown,
+		)
+	}
+
+	if verified.Manifest.GoDependencies.Reason == "" {
+		t.Fatal("unknown Go dependency status must explain why it is unknown")
+	}
+
 	if goEnv.GOOS == "" || goEnv.GOARCH == "" {
 		t.Fatalf("missing Go target platform: %+v", goEnv)
 	}
