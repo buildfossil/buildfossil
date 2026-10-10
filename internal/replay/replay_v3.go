@@ -12,7 +12,7 @@ import (
 )
 
 // RunV3WithOptions replays a verified schema-v3 capsule with
-// one embedded Go module, without network access.
+// zero or one embedded Go module, without network access.
 //
 // Experimental: uses Docker Exec, which is not equivalent to PID 1.
 func RunV3WithOptions(
@@ -43,8 +43,8 @@ func RunV3WithOptions(
 		return result, fmt.Errorf("replay: unsupported v3 runtime")
 	}
 
-	if len(verified.Manifest.GoModules) != 1 {
-		return result, fmt.Errorf("replay: expected one Go module")
+	if len(verified.Manifest.GoModules) > capsule.MaxGoModulesV3 {
+		return result, fmt.Errorf("replay: too many Go modules")
 	}
 
 	uid := os.Geteuid()

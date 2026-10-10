@@ -76,9 +76,9 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 		)
 	}
 
-	if len(result.Manifest.GoModules) != 1 {
+	if len(result.Manifest.GoModules) > MaxGoModulesV3 {
 		return VerifiedCapsuleV3{}, fmt.Errorf(
-			"capsule: v3 reader requires exactly one Go module",
+			"capsule: v3 reader supports at most one Go module",
 		)
 	}
 
@@ -87,8 +87,10 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 		result.Manifest.Workspace,
 	)
 
-	for _, artifact := range result.Manifest.GoModules[0].Artifacts {
-		expectedSize += tarEntrySize(artifact.Size)
+	if len(result.Manifest.GoModules) == 1 {
+		for _, artifact := range result.Manifest.GoModules[0].Artifacts {
+			expectedSize += tarEntrySize(artifact.Size)
+		}
 	}
 
 	if info.Size() != expectedSize {
@@ -105,7 +107,9 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 		len(result.Manifest.Workspace.Files),
 	)
 
+	var goMod []byte
 	var goSum []byte
+	foundGoMod := false
 	foundGoSum := false
 
 	for _, metadata := range result.Manifest.Workspace.Files {
@@ -149,7 +153,12 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 			Mode: mode,
 		})
 
-		if metadata.Path == "go.sum" {
+		switch metadata.Path {
+		case "go.mod":
+			goMod = data
+			foundGoMod = true
+
+		case "go.sum":
 			goSum = data
 			foundGoSum = true
 		}
@@ -161,76 +170,96 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 		)
 	}
 
-	result.Artifacts = make(map[string][]byte, MaxGoModuleArtifactsV3)
-
-	for _, name := range goArtifactNamesV3 {
-		var metadata *GoModuleArtifact
-
-		for i := range result.Manifest.GoModules[0].Artifacts {
-			artifact := &result.Manifest.GoModules[0].Artifacts[i]
-			if artifact.Path == name {
-				metadata = artifact
-				break
-			}
-		}
-
-		if metadata == nil {
-			return VerifiedCapsuleV3{}, fmt.Errorf(
-				"capsule: missing artifact metadata %q",
-				name,
-			)
-		}
-
-		header, err := tr.Next()
-		if err != nil {
-			return VerifiedCapsuleV3{}, fmt.Errorf(
-				"capsule: read artifact %q: %w",
-				name,
-				err,
-			)
-		}
-
-		if header.Name != "dependencies/"+name ||
-			header.Typeflag != tar.TypeReg ||
-			header.Size != metadata.Size {
-			return VerifiedCapsuleV3{}, fmt.Errorf(
-				"capsule: invalid v3 artifact entry %q",
-				name,
-			)
-		}
-
-		data, err := io.ReadAll(
-			io.LimitReader(tr, MaxGoModuleTotalSizeV3+1),
+	if !foundGoMod {
+		return VerifiedCapsuleV3{}, fmt.Errorf(
+			"capsule: v3 archive missing workspace/go.mod",
 		)
-		if err != nil {
-			return VerifiedCapsuleV3{}, err
-		}
-
-		if int64(len(data)) != metadata.Size ||
-			SHA256(data) != metadata.SHA256 {
-			return VerifiedCapsuleV3{}, fmt.Errorf(
-				"capsule: v3 artifact integrity mismatch: %q",
-				name,
-			)
-		}
-
-		result.Artifacts[name] = data
 	}
 
-	if _, err := tr.Next(); err != io.EOF {
+	if err := ValidateGoModuleConsistencyV3(
+		goMod,
+		result.Manifest.GoModules,
+	); err != nil {
 		return VerifiedCapsuleV3{}, fmt.Errorf(
-			"capsule: unexpected extra v3 entry or archive error: %v",
+			"capsule: invalid v3 Go dependency declaration: %w",
 			err,
 		)
 	}
 
-	if err := VerifyGoModuleArtifactsV3(
-		result.Manifest.GoModules[0],
-		result.Artifacts,
-		goSum,
-	); err != nil {
+	result.Artifacts = make(map[string][]byte)
+
+	if len(result.Manifest.GoModules) == 1 {
+		for _, name := range goArtifactNamesV3 {
+			var metadata *GoModuleArtifact
+
+			for i := range result.Manifest.GoModules[0].Artifacts {
+				artifact := &result.Manifest.GoModules[0].Artifacts[i]
+				if artifact.Path == name {
+					metadata = artifact
+					break
+				}
+			}
+
+			if metadata == nil {
+				return VerifiedCapsuleV3{}, fmt.Errorf(
+					"capsule: missing artifact metadata %q",
+					name,
+				)
+			}
+
+			header, err := tr.Next()
+			if err != nil {
+				return VerifiedCapsuleV3{}, fmt.Errorf(
+					"capsule: read artifact %q: %w",
+					name,
+					err,
+				)
+			}
+
+			if header.Name != "dependencies/"+name ||
+				header.Typeflag != tar.TypeReg ||
+				header.Size != metadata.Size {
+				return VerifiedCapsuleV3{}, fmt.Errorf(
+					"capsule: invalid v3 artifact entry %q",
+					name,
+				)
+			}
+
+			data, err := io.ReadAll(
+				io.LimitReader(tr, MaxGoModuleTotalSizeV3+1),
+			)
+			if err != nil {
+				return VerifiedCapsuleV3{}, err
+			}
+
+			if int64(len(data)) != metadata.Size ||
+				SHA256(data) != metadata.SHA256 {
+				return VerifiedCapsuleV3{}, fmt.Errorf(
+					"capsule: v3 artifact integrity mismatch: %q",
+					name,
+				)
+			}
+
+			result.Artifacts[name] = data
+		}
+
+		if err := VerifyGoModuleArtifactsV3(
+			result.Manifest.GoModules[0],
+			result.Artifacts,
+			goSum,
+		); err != nil {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: verify v3 Go module: %w",
+				err,
+			)
+		}
+	}
+
+	// Reject unexpected dependency entries, including when there
+	// are zero declared modules.
+	if _, err := tr.Next(); err != io.EOF {
 		return VerifiedCapsuleV3{}, fmt.Errorf(
-			"capsule: verify v3 Go module: %w",
+			"capsule: unexpected extra v3 entry or archive error: %v",
 			err,
 		)
 	}

@@ -155,6 +155,8 @@ func TestSnapshotExecutionContainerSecurity(t *testing.T) {
 	}
 
 	for _, expected := range []string{
+		"GOWORK=off",
+		"GOFLAGS=",
 		"GOPROXY=off",
 		"GOSUMDB=off",
 		"GOTOOLCHAIN=local",

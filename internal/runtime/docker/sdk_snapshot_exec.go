@@ -238,6 +238,8 @@ func newSnapshotExecutionOptions(
 		"TMPDIR=/tmp",
 		"GOCACHE=/gocache",
 		"GOMODCACHE=/gomodcache",
+		"GOWORK=off",
+		"GOFLAGS=",
 		"GOTOOLCHAIN=local",
 		"GOPROXY=off",
 		"GOSUMDB=off",

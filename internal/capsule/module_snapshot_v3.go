@@ -24,8 +24,12 @@ func BuildGoModuleSnapshotV3(
 		return nil, fmt.Errorf("capsule: invalid manifest: %w", err)
 	}
 
-	if len(verified.Manifest.GoModules) != 1 {
-		return nil, fmt.Errorf("capsule: expected exactly one Go module")
+	if len(verified.Manifest.GoModules) > MaxGoModulesV3 {
+		return nil, fmt.Errorf("capsule: too many Go modules")
+	}
+
+	if len(verified.Manifest.GoModules) == 0 && len(verified.Artifacts) != 0 {
+		return nil, fmt.Errorf("capsule: unexpected artifacts without Go modules")
 	}
 
 	if len(verified.Files) != len(verified.Manifest.Workspace.Files) {
@@ -68,6 +72,17 @@ func BuildGoModuleSnapshotV3(
 
 	if !seen["go.sum"] {
 		return nil, fmt.Errorf("capsule: missing go.sum")
+	}
+
+	if len(verified.Manifest.GoModules) == 0 {
+		var buffer bytes.Buffer
+		writer := tar.NewWriter(&buffer)
+
+		if err := writer.Close(); err != nil {
+			return nil, fmt.Errorf("capsule: close empty module TAR: %w", err)
+		}
+
+		return buffer.Bytes(), nil
 	}
 
 	mod := verified.Manifest.GoModules[0]
