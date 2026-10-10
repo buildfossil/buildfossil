@@ -62,7 +62,7 @@ func TestValidatePortableGoReplay(t *testing.T) {
 			modify: func(m *capsule.Manifest) {
 				m.GoBuildEnv.GOOS = "linux"
 			},
-			wantErr: "does not match capture platform",
+			wantErr: "unsupported Go build target",
 		},
 		{
 			name: "missing runtime",

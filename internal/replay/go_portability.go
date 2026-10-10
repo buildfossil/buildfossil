@@ -17,18 +17,36 @@ func validatePortableGoReplay(manifest capsule.Manifest) error {
 		return fmt.Errorf("replay: portable Go requires recorded build environment")
 	}
 
+	if manifest.Platform.OS != "darwin" ||
+		manifest.Platform.Architecture != "arm64" {
+		return fmt.Errorf("replay: unsupported portable Go capture platform")
+	}
+
 	env := manifest.GoBuildEnv
 
-	if env.GOOS != manifest.Platform.OS ||
-		env.GOARCH != manifest.Platform.Architecture {
+	if env.CGOEnabled != "0" {
+		return fmt.Errorf("replay: portable Go requires CGO_ENABLED=0")
+	}
+
+	if env.GOFLAGS != "" {
+		return fmt.Errorf("replay: portable Go requires empty GOFLAGS")
+	}
+
+	switch {
+	case env.GOOS == "darwin" && env.GOARCH == "arm64":
+		// Preserve the existing native macOS Go replay policy.
+		return env.ValidatePortableGoBuild()
+
+	case env.GOOS == "linux" && env.GOARCH == "amd64":
+		// Explicitly supported cross-build:
+		// macOS ARM64 capture -> Linux AMD64 Go build.
+		return nil
+
+	default:
 		return fmt.Errorf(
-			"replay: Go build target does not match capture platform",
+			"replay: unsupported Go build target %s/%s",
+			env.GOOS,
+			env.GOARCH,
 		)
 	}
-
-	if err := env.ValidatePortableGoBuild(); err != nil {
-		return fmt.Errorf("replay: %w", err)
-	}
-
-	return nil
 }

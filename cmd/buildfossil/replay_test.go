@@ -61,6 +61,31 @@ func TestReplayInvalidArguments(t *testing.T) {
 				"failure.bfc",
 			},
 		},
+		{
+			name: "v3 without allow-command",
+			args: []string{"--v3", "failure.bfc"},
+		},
+		{
+			name: "v3 missing capsule",
+			args: []string{"--v3", "--allow-command"},
+		},
+		{
+			name: "v3 diagnostics unsupported",
+			args: []string{
+				"--v3",
+				"--allow-command",
+				"--diagnose-dependencies",
+				"failure.bfc",
+			},
+		},
+		{
+			name: "v3 wrong flag order",
+			args: []string{
+				"--allow-command",
+				"--v3",
+				"failure.bfc",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -114,6 +139,11 @@ func TestReplayContextTimeout(t *testing.T) {
 		},
 		{
 			name:         "v2 has no global timeout",
+			useV2:        true,
+			wantDeadline: false,
+		},
+		{
+			name:         "v3 has no global timeout",
 			useV2:        true,
 			wantDeadline: false,
 		},

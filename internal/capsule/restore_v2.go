@@ -12,18 +12,35 @@ func RestoreWorkspaceV2(root string, verified VerifiedCapsuleV2) error {
 		return fmt.Errorf("capsule: restore requires schema version 2")
 	}
 
-	if err := verified.Manifest.Validate(); err != nil {
+	return restoreWorkspaceFiles(
+		root,
+		verified.Manifest,
+		verified.Files,
+	)
+}
+
+func restoreWorkspaceFiles(
+	root string,
+	manifest Manifest,
+	files []WorkspaceFile,
+) error {
+	if manifest.SchemaVersion != SchemaVersionV2 &&
+		manifest.SchemaVersion != SchemaVersionV3 {
+		return fmt.Errorf("capsule: unsupported workspace restore schema")
+	}
+
+	if err := manifest.Validate(); err != nil {
 		return fmt.Errorf("capsule: invalid manifest: %w", err)
 	}
 
-	metadata := verified.Manifest.Workspace.Files
+	metadata := manifest.Workspace.Files
 
-	if len(verified.Files) != len(metadata) {
+	if len(files) != len(metadata) {
 		return fmt.Errorf("capsule: workspace file count mismatch")
 	}
 
 	// Verify all files before writing anything to disk.
-	for i, file := range verified.Files {
+	for i, file := range files {
 		if file.Path != metadata[i].Path {
 			return fmt.Errorf("capsule: workspace path mismatch")
 		}
@@ -38,12 +55,12 @@ func RestoreWorkspaceV2(root string, verified VerifiedCapsuleV2) error {
 	}
 
 	// Reject file/directory path conflicts.
-	paths := make(map[string]struct{}, len(verified.Files))
-	for _, file := range verified.Files {
+	paths := make(map[string]struct{}, len(files))
+	for _, file := range files {
 		paths[file.Path] = struct{}{}
 	}
 
-	for _, file := range verified.Files {
+	for _, file := range files {
 		parts := strings.Split(file.Path, "/")
 		for i := 1; i < len(parts); i++ {
 			parent := strings.Join(parts[:i], "/")
@@ -80,7 +97,7 @@ func RestoreWorkspaceV2(root string, verified VerifiedCapsuleV2) error {
 	}
 	defer workspaceRoot.Close()
 
-	for _, file := range verified.Files {
+	for _, file := range files {
 		parent := path.Dir(file.Path)
 
 		if parent != "." {

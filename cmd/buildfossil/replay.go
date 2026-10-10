@@ -25,11 +25,13 @@ func replayContext(
 func runReplay(args []string) int {
 	const usage = "Usage:\n" +
 		"  buildfossil replay [--allow-command] <capsule.bfc>\n" +
-		"  buildfossil replay --v2 --allow-command [--diagnose-dependencies] <capsule.bfc>"
+		"  buildfossil replay --v2 --allow-command [--diagnose-dependencies] <capsule.bfc>\n" +
+		"  buildfossil replay --v3 --allow-command <capsule.bfc>"
 
 	var capsulePath string
 	var options replay.Options
 	var useV2 bool
+	var useV3 bool
 
 	switch {
 	case len(args) == 1:
@@ -55,6 +57,13 @@ func runReplay(args []string) int {
 		options.DiagnoseDependencies = true
 		capsulePath = args[3]
 
+	case len(args) == 3 &&
+		args[0] == "--v3" &&
+		args[1] == "--allow-command":
+		useV3 = true
+		options.AllowArbitraryCommand = true
+		capsulePath = args[2]
+
 	default:
 		fmt.Fprintln(os.Stderr, usage)
 		return 2
@@ -71,15 +80,18 @@ func runReplay(args []string) int {
 	)
 	defer stop()
 
-	ctx, cancel := replayContext(signalCtx, useV2)
+	ctx, cancel := replayContext(signalCtx, useV2 || useV3)
 	defer cancel()
 
 	var result replay.Result
 	var err error
 
-	if useV2 {
+	switch {
+	case useV3:
+		result, err = replay.RunV3WithOptions(ctx, capsulePath, options)
+	case useV2:
 		result, err = replay.RunV2WithOptions(ctx, capsulePath, options)
-	} else {
+	default:
 		result, err = replay.RunWithOptions(ctx, capsulePath, options)
 	}
 	if err != nil {
