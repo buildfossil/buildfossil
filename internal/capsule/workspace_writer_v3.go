@@ -28,13 +28,21 @@ func WriteWorkspaceV3(
 		return fmt.Errorf("capsule: v3 writer requires schema version 3")
 	}
 
-	if len(manifest.GoModules) != 1 {
-		return fmt.Errorf("capsule: v3 writer requires exactly one Go module")
+	if len(manifest.GoModules) > MaxGoModulesV3 {
+		return fmt.Errorf("capsule: v3 writer supports at most one Go module")
+	}
+
+	if len(manifest.GoModules) == 0 && len(artifacts) != 0 {
+		return fmt.Errorf(
+			"capsule: zero-dependency capsule must not contain Go artifacts",
+		)
 	}
 
 	metadata := make([]FileMetadata, 0, len(files))
 
+	var goMod []byte
 	var goSum []byte
+	foundGoMod := false
 	foundGoSum := false
 
 	for _, file := range files {
@@ -58,11 +66,18 @@ func WriteWorkspaceV3(
 			SHA256: SHA256(file.Data),
 		})
 
-		if file.Path == "go.sum" {
+		switch file.Path {
+		case "go.mod":
+			if foundGoMod {
+				return fmt.Errorf("capsule: duplicate workspace go.mod")
+			}
+			goMod = file.Data
+			foundGoMod = true
+
+		case "go.sum":
 			if foundGoSum {
 				return fmt.Errorf("capsule: duplicate workspace go.sum")
 			}
-
 			goSum = file.Data
 			foundGoSum = true
 		}
@@ -72,18 +87,31 @@ func WriteWorkspaceV3(
 		return fmt.Errorf("capsule: v3 requires workspace/go.sum")
 	}
 
+	if !foundGoMod {
+		return fmt.Errorf("capsule: v3 requires workspace/go.mod")
+	}
+
+	if err := ValidateGoModuleConsistencyV3(
+		goMod,
+		manifest.GoModules,
+	); err != nil {
+		return fmt.Errorf("capsule: invalid Go dependency declaration: %w", err)
+	}
+
 	manifest.Workspace = Workspace{Files: metadata}
 
 	if err := manifest.Validate(); err != nil {
 		return fmt.Errorf("capsule: invalid v3 manifest: %w", err)
 	}
 
-	if err := VerifyGoModuleArtifactsV3(
-		manifest.GoModules[0],
-		artifacts,
-		goSum,
-	); err != nil {
-		return fmt.Errorf("capsule: verify Go module: %w", err)
+	if len(manifest.GoModules) == 1 {
+		if err := VerifyGoModuleArtifactsV3(
+			manifest.GoModules[0],
+			artifacts,
+			goSum,
+		); err != nil {
+			return fmt.Errorf("capsule: verify Go module: %w", err)
+		}
 	}
 
 	manifestData, err := json.Marshal(manifest)
@@ -132,22 +160,24 @@ func WriteWorkspaceV3(
 		}
 	}
 
-	for _, name := range goArtifactNamesV3 {
-		data, ok := artifacts[name]
-		if !ok {
-			return fmt.Errorf("capsule: missing Go artifact %q", name)
-		}
+	if len(manifest.GoModules) == 1 {
+		for _, name := range goArtifactNamesV3 {
+			data, ok := artifacts[name]
+			if !ok {
+				return fmt.Errorf("capsule: missing Go artifact %q", name)
+			}
 
-		if err := writeEntry(
-			"dependencies/"+name,
-			data,
-			0600,
-		); err != nil {
-			return fmt.Errorf(
-				"capsule: write Go artifact %q: %w",
-				name,
-				err,
-			)
+			if err := writeEntry(
+				"dependencies/"+name,
+				data,
+				0600,
+			); err != nil {
+				return fmt.Errorf(
+					"capsule: write Go artifact %q: %w",
+					name,
+					err,
+				)
+			}
 		}
 	}
 

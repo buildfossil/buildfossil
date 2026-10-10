@@ -46,9 +46,9 @@ The schema-v3 prototype supports:
 
 - Go 1.26.6.
 - The exact command `go build ./...`.
-- One direct external Go module dependency.
+- Zero or one direct external Go module dependency.
 - Selected regular workspace files.
-- Go module `.zip`, `.mod`, and `.info` artifacts.
+- Verified Go module `.zip`, `.mod`, and `.info` artifacts when a dependency is present.
 - SHA-256 and Go module checksum verification.
 - Captured stdout, stderr, exit code, and build environment metadata.
 - Offline replay inside a Linux AMD64 Docker container.
@@ -58,6 +58,13 @@ The schema-v3 prototype supports:
 BuildFossil also retains older experimental capture/replay modes.
 
 The schema-v3 format is experimental and may change.
+
+Projects with no external Go dependencies are supported. For these
+projects, the capsule contains no dependency artifacts.
+
+Capture requires explicitly including both `go.mod` and `go.sum`,
+even when `go.sum` is empty. Active Go workspaces (`go.work`) are
+not supported; use `GOWORK=off`.
 
 ## Requirements
 
@@ -147,6 +154,12 @@ export GOPROXY=off
 export GOSUMDB=off
 ```
 
+Ensure no external Go workspace is active:
+
+```sh
+export GOWORK=off
+```
+
 Run the BuildFossil executable built in the previous step, replacing `"$BUILDFOSSIL_BIN"` with its actual absolute path:
 
 ```sh
@@ -196,10 +209,13 @@ A schema-v3 `.bfc` capsule contains:
 - A JSON manifest describing the captured execution.
 - Selected workspace files and their integrity metadata.
 - Captured build environment information.
-- A bounded set of Go module artifacts.
+- Zero dependency artifacts for dependency-free builds, or three
+  verified Go module artifacts for one supported external dependency.
 - Recorded command output and exit status.
 
-The archive is checked before its contents are staged for replay.
+The archive is verified before replay. Workspace and module-cache
+snapshots are constructed from verified capsule contents and uploaded
+to Docker-managed volumes, without host bind mounts for replay inputs.
 
 Integrity verification is not the same as authenticating who created a capsule.
 
@@ -229,7 +245,12 @@ The current schema-v3 implementation:
 
 - Supports only the exact command `go build ./...`.
 - Requires Go 1.26.6.
-- Supports exactly one direct external Go module dependency.
+- Supports zero or one direct external Go module dependency.
+- Requires explicit inclusion of `go.mod` and `go.sum`, even for
+  dependency-free builds.
+- Does not support active Go workspaces (`go.work`), `replace`,
+  `exclude`, or multiple external Go modules.
+- Does not support indirect-only dependency configurations.
 - Does not support arbitrary dependency graphs.
 - Does not support general-purpose CI job capture.
 - Requires workspace files to be explicitly included.
@@ -240,6 +261,13 @@ The current schema-v3 implementation:
 - Has unresolved security-hardening work, including staging race considerations.
 
 Replaying a captured failure can produce a different result or fail when the supported reproducibility assumptions are not met.
+
+Replay runs with `GOWORK=off`, empty `GOFLAGS`, `GOPROXY=off`,
+`GOSUMDB=off`, and `GOTOOLCHAIN=local` in the restricted Docker
+execution container.
+
+A failure is reported as reproduced only when the replay exit code
+and complete stderr match the captured failure exactly.
 
 ## Tested Environments
 

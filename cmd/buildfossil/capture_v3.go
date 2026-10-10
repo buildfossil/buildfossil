@@ -24,6 +24,15 @@ func captureCommandV3(
 		return 2
 	}
 
+	if err := capsule.ValidateGoWorkspaceV3(workspaceRoot); err != nil {
+		fmt.Fprintf(
+			os.Stderr,
+			"buildfossil: Go workspace: %v\n",
+			err,
+		)
+		return 125
+	}
+
 	detectedRuntime := capsule.DetectRuntime(argv, workspaceRoot)
 
 	if detectedRuntime == nil ||
@@ -112,8 +121,8 @@ func captureCommandV3(
 		return 125
 	}
 
-	goModule, artifacts, err :=
-		capsule.ReadGoModuleArtifactsForCaptureV3(
+	goModules, artifacts, err :=
+		capsule.ReadGoDependenciesForCaptureV3(
 			goMod,
 			goSum,
 			moduleCacheRoot,
@@ -128,7 +137,7 @@ func captureCommandV3(
 		SchemaVersion: capsule.SchemaVersionV3,
 		Runtime:       detectedRuntime,
 		GoBuildEnv:    &goBuildEnv,
-		GoModules:     []capsule.GoModuleV3{goModule},
+		GoModules:     goModules,
 		Execution: capsule.Execution{
 			Argv:            result.Argv,
 			WorkingDir:      ".",

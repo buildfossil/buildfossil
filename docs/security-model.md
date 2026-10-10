@@ -13,7 +13,12 @@ sandbox for arbitrary hostile workloads.
 ## Scope
 
 Schema-v3 replay currently supports a constrained Go build scenario
-with exactly one direct external module dependency.
+with zero or one direct external module dependency.
+
+For dependency-free builds, the manifest declares no Go modules,
+the capsule contains no dependency artifacts, and replay constructs
+an empty module-cache TAR. For builds with one external module,
+the existing ZIP, MOD, INFO, and go.sum integrity checks remain required.
 
 This document describes the path from a verified `.bfc` capsule to
 execution in a restricted Docker container.
@@ -25,19 +30,28 @@ The current schema-v3 replay implementation:
 1. Opens and verifies the `.bfc` capsule.
 2. Validates workspace metadata, file contents, and Go module artifacts.
 3. Builds a workspace TAR from verified capsule bytes.
-4. Builds a Go module download-cache TAR from verified artifacts.
+4. Builds a Go module download-cache TAR from verified artifacts,
+   or an empty TAR for dependency-free builds.
 5. Creates two uniquely named Docker-managed volumes.
 6. Uploads the TAR archives using the Docker Engine API.
 7. Removes the temporary preparation containers.
 8. Creates a restricted execution container with both volumes mounted
    read-only.
 9. Copies the module cache into a writable container tmpfs.
-10. Materializes the module offline and executes the captured command.
+10. Runs offline Go module preparation and executes the captured command.
 11. Compares the replay exit code and stderr with the captured failure.
 12. Removes the execution container and Docker volumes.
 
 The active schema-v3 replay path does not restore the workspace into
 host staging directories or use host bind mounts for replay inputs.
+
+The execution container explicitly sets `GOWORK=off`, empty
+`GOFLAGS`, `GOPROXY=off`, `GOSUMDB=off`, and
+`GOTOOLCHAIN=local`.
+
+Capture rejects an active Go workspace detected through
+`go env GOWORK`. This check does not eliminate all possible
+environment or filesystem races between inspection and execution.
 
 ## Integrity Properties
 
