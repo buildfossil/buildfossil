@@ -343,3 +343,27 @@ func TestVerifiedCapsuleV3RejectsInvalidTarStructure(t *testing.T) {
 		})
 	}
 }
+
+func TestReadVerifiedV3RejectsSymlink(t *testing.T) {
+	dir := t.TempDir()
+
+	target := filepath.Join(dir, "target.bfc")
+	if err := os.WriteFile(target, []byte("test"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	link := filepath.Join(dir, "link.bfc")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := ReadVerifiedV3(link); err == nil {
+		t.Fatal("expected symbolic link to be rejected")
+	}
+}
+
+func TestReadVerifiedV3RejectsDirectory(t *testing.T) {
+	if _, err := ReadVerifiedV3(t.TempDir()); err == nil {
+		t.Fatal("expected directory to be rejected")
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"syscall"
 )
 
 type VerifiedCapsuleV3 struct {
@@ -17,21 +18,21 @@ type VerifiedCapsuleV3 struct {
 func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 	var result VerifiedCapsuleV3
 
-	info, err := os.Lstat(filename)
+	f, err := os.OpenFile(filename, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
 	if err != nil {
-		return result, fmt.Errorf("capsule: stat v3 archive: %w", err)
+		return result, fmt.Errorf("capsule: open v3 archive: %w", err)
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return result, fmt.Errorf("capsule: stat opened v3 archive: %w", err)
 	}
 
 	if !info.Mode().IsRegular() ||
 		info.Size() > MaxCapsuleSize {
 		return result, fmt.Errorf("capsule: invalid v3 archive file or size")
 	}
-
-	f, err := os.Open(filename)
-	if err != nil {
-		return result, fmt.Errorf("capsule: open v3 archive: %w", err)
-	}
-	defer f.Close()
 
 	tr := tar.NewReader(io.LimitReader(f, MaxCapsuleSize+1))
 
