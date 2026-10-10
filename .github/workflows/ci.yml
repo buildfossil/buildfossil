@@ -197,3 +197,117 @@ jobs:
             echo "macOS Go Capture test did not pass"
             exit 1
           fi
+
+  cross-platform-capture:
+    name: Cross-platform Go Capture
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Build BuildFossil CLI
+        run: go build -o buildfossil ./cmd/buildfossil
+
+      - name: Capture Go compilation failure
+        shell: bash
+        env:
+          CGO_ENABLED: "0"
+          GOFLAGS: ""
+          GOOS: darwin
+          GOARCH: arm64
+        run: |
+          set -euo pipefail
+
+          test "$(uname -s)" = "Darwin"
+          test "$(uname -m)" = "arm64"
+
+          cd testdata/cross-platform-go
+
+          set +e
+          ../../buildfossil capture \
+            --include go.mod \
+            --include main.go \
+            -- go build ./...
+          capture_exit=$?
+          set -e
+
+          if [ "$capture_exit" -ne 1 ]; then
+            echo "Unexpected capture exit: $capture_exit"
+            exit 1
+          fi
+
+          test -s failure.bfc
+          cp failure.bfc "$RUNNER_TEMP/cross-platform-go.bfc"
+
+          echo "macOS capsule created successfully"
+
+      - name: Upload captured capsule
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-platform-go-capsule
+          path: ${{ runner.temp }}/cross-platform-go.bfc
+          if-no-files-found: error
+          retention-days: 7
+
+  cross-platform-replay:
+    name: Cross-platform Go Replay
+    runs-on: ubuntu-24.04
+    needs: cross-platform-capture
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Download macOS capsule
+        uses: actions/download-artifact@v4
+        with:
+          name: cross-platform-go-capsule
+          path: ${{ runner.temp }}/buildfossil-capsule
+
+      - name: Build BuildFossil CLI
+        run: go build -o buildfossil ./cmd/buildfossil
+
+      - name: Replay macOS capsule in Linux Docker
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          capsule="$RUNNER_TEMP/buildfossil-capsule/cross-platform-go.bfc"
+          test -s "$capsule"
+
+          docker version
+
+          set +e
+          ./buildfossil replay --v2 --allow-command "$capsule" \
+            > "$RUNNER_TEMP/replay.stdout" \
+            2> "$RUNNER_TEMP/replay.stderr"
+          replay_exit=$?
+          set -e
+
+          echo "Replay exit code: $replay_exit"
+          cat "$RUNNER_TEMP/replay.stdout"
+          cat "$RUNNER_TEMP/replay.stderr"
+
+          if [ "$replay_exit" -ne 0 ]; then
+            echo "BuildFossil Replay failed"
+            exit 1
+          fi
+
+          if ! grep -qi 'reproduced' "$RUNNER_TEMP/replay.stdout" \
+             && ! grep -qi 'reproduced' "$RUNNER_TEMP/replay.stderr"; then
+            echo "Expected REPRODUCED outcome"
+            exit 1
+          fi
