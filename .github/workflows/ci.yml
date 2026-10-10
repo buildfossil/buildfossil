@@ -415,10 +415,14 @@ jobs:
 
           cd testdata/cross-platform-go-v3
 
-          # Populate Go module cache and create go.sum.
+          # Download the exact dependency and record both checksums.
+          go mod download github.com/google/uuid@v1.6.0
           go mod download
 
           test -s go.sum
+
+          grep -q '^github.com/google/uuid v1.6.0 h1:' go.sum
+          grep -q '^github.com/google/uuid v1.6.0/go.mod h1:' go.sum
 
           # Capture must not need a module proxy.
           export GOPROXY=off
