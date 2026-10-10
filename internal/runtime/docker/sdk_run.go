@@ -28,6 +28,7 @@ func combineCleanupError(runErr, cleanupErr error, containerID string) error {
 }
 
 const defaultExecutionTimeout = 30 * time.Second
+const goModulesExecutionTimeout = 120 * time.Second
 
 // RunWithSDK executes a command using the legacy Alpine runtime.
 func RunWithSDK(
@@ -95,6 +96,35 @@ func RunWithSDKRuntimeTarget(
 	)
 }
 
+// RunWithSDKRuntimeModules executes a Go command with staged module artifacts.
+// The caller must provide a trusted, immutable staging directory.
+func RunWithSDKRuntimeModules(
+	ctx context.Context,
+	workspace string,
+	argv []string,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+	artifactsDir string,
+) (int, error) {
+	if artifactsDir == "" {
+		return 0, fmt.Errorf("docker SDK: empty module artifacts directory")
+	}
+	return runWithSDKOptionsTargetModules(
+		ctx,
+		workspace,
+		argv,
+		user,
+		stdout,
+		stderr,
+		goModulesExecutionTimeout,
+		runtime,
+		"",
+		"",
+		artifactsDir,
+	)
+}
+
 func runWithSDKTimeout(
 	ctx context.Context,
 	workspace string,
@@ -148,6 +178,33 @@ func runWithSDKOptionsTarget(
 	runtime *RuntimeSpec,
 	targetOS string,
 	targetArch string,
+) (int, error) {
+	return runWithSDKOptionsTargetModules(
+		ctx,
+		workspace,
+		argv,
+		user,
+		stdout,
+		stderr,
+		executionTimeout,
+		runtime,
+		targetOS,
+		targetArch,
+		"",
+	)
+}
+
+func runWithSDKOptionsTargetModules(
+	ctx context.Context,
+	workspace string,
+	argv []string,
+	user string,
+	stdout, stderr io.Writer,
+	executionTimeout time.Duration,
+	runtime *RuntimeSpec,
+	targetOS string,
+	targetArch string,
+	artifactsDir string,
 ) (exitCode int, runErr error) {
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("docker SDK: empty command")
@@ -206,6 +263,16 @@ func runWithSDKOptionsTarget(
 		createOptions.HostConfig.Tmpfs = map[string]string{
 			"/tmp":     "rw,nosuid,nodev,size=64m,mode=1777",
 			"/gocache": "rw,nosuid,nodev,size=64m,mode=1777",
+		}
+	}
+
+	if artifactsDir != "" {
+		if err := configureGoModuleArtifacts(
+			&createOptions,
+			runtime,
+			artifactsDir,
+		); err != nil {
+			return 0, err
 		}
 	}
 
