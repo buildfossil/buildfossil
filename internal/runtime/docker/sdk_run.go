@@ -70,6 +70,31 @@ func RunWithSDKRuntime(
 	)
 }
 
+// RunWithSDKRuntimeTarget executes a command with an explicit Go target.
+func RunWithSDKRuntimeTarget(
+	ctx context.Context,
+	workspace string,
+	argv []string,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+	targetOS string,
+	targetArch string,
+) (int, error) {
+	return runWithSDKOptionsTarget(
+		ctx,
+		workspace,
+		argv,
+		user,
+		stdout,
+		stderr,
+		defaultExecutionTimeout,
+		runtime,
+		targetOS,
+		targetArch,
+	)
+}
+
 func runWithSDKTimeout(
 	ctx context.Context,
 	workspace string,
@@ -98,6 +123,31 @@ func runWithSDKOptions(
 	stdout, stderr io.Writer,
 	executionTimeout time.Duration,
 	runtime *RuntimeSpec,
+) (int, error) {
+	return runWithSDKOptionsTarget(
+		ctx,
+		workspace,
+		argv,
+		user,
+		stdout,
+		stderr,
+		executionTimeout,
+		runtime,
+		"",
+		"",
+	)
+}
+
+func runWithSDKOptionsTarget(
+	ctx context.Context,
+	workspace string,
+	argv []string,
+	user string,
+	stdout, stderr io.Writer,
+	executionTimeout time.Duration,
+	runtime *RuntimeSpec,
+	targetOS string,
+	targetArch string,
 ) (exitCode int, runErr error) {
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("docker SDK: empty command")
@@ -156,6 +206,17 @@ func runWithSDKOptions(
 		createOptions.HostConfig.Tmpfs = map[string]string{
 			"/tmp":     "rw,nosuid,nodev,size=64m,mode=1777",
 			"/gocache": "rw,nosuid,nodev,size=64m,mode=1777",
+		}
+	}
+
+	if targetOS != "" || targetArch != "" {
+		if err := configureGoTargetPlatform(
+			&createOptions,
+			runtime,
+			targetOS,
+			targetArch,
+		); err != nil {
+			return 0, err
 		}
 	}
 

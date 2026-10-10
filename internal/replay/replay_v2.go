@@ -27,13 +27,8 @@ func RunV2WithOptions(
 		return result, fmt.Errorf("replay: verify v2 capsule: %w", err)
 	}
 
-	platform := verified.Manifest.Platform
-	if platform.OS != "linux" || platform.Architecture != "amd64" {
-		return result, fmt.Errorf(
-			"replay: unsupported source platform %s/%s; expected linux/amd64",
-			platform.OS,
-			platform.Architecture,
-		)
+	if err := validateReplayPlatform(verified.Manifest); err != nil {
+		return result, err
 	}
 
 	if !options.AllowArbitraryCommand {
@@ -75,15 +70,32 @@ func RunV2WithOptions(
 
 	var stderr boundedOutput
 
-	code, err := docker.RunWithSDKRuntime(
-		ctx,
-		workspace,
-		argv,
-		containerUser,
-		io.Discard,
-		&stderr,
-		runtimeSpec,
-	)
+	var code int
+
+	if verified.Manifest.Platform.OS == "darwin" {
+		code, err = docker.RunWithSDKRuntimeTarget(
+			ctx,
+			workspace,
+			argv,
+			containerUser,
+			io.Discard,
+			&stderr,
+			runtimeSpec,
+			verified.Manifest.GoBuildEnv.GOOS,
+			verified.Manifest.GoBuildEnv.GOARCH,
+		)
+	} else {
+		code, err = docker.RunWithSDKRuntime(
+			ctx,
+			workspace,
+			argv,
+			containerUser,
+			io.Discard,
+			&stderr,
+			runtimeSpec,
+		)
+	}
+
 	if err != nil {
 		return result, fmt.Errorf("replay: Docker execution: %w", err)
 	}

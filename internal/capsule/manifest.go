@@ -14,11 +14,12 @@ const (
 )
 
 type Manifest struct {
-	SchemaVersion int       `json:"schema_version"`
-	Execution     Execution `json:"execution"`
-	Platform      Platform  `json:"platform"`
-	Workspace     Workspace `json:"workspace"`
-	Runtime       *Runtime  `json:"runtime,omitempty"`
+	SchemaVersion int                 `json:"schema_version"`
+	Execution     Execution           `json:"execution"`
+	Platform      Platform            `json:"platform"`
+	Workspace     Workspace           `json:"workspace"`
+	Runtime       *Runtime            `json:"runtime,omitempty"`
+	GoBuildEnv    *GoBuildEnvironment `json:"go_build_env,omitempty"`
 }
 
 type Workspace struct {
@@ -76,6 +77,24 @@ func (m Manifest) Validate() error {
 
 		if err := m.Runtime.Validate(); err != nil {
 			return err
+		}
+	}
+
+	if m.GoBuildEnv != nil {
+		if m.SchemaVersion != SchemaVersionV2 {
+			return errors.New("capsule: Go build environment requires schema version 2")
+		}
+
+		if m.Runtime == nil ||
+			m.Runtime.Kind != "go" ||
+			m.Runtime.Version != SupportedGoVersion {
+			return errors.New("capsule: Go build environment requires supported Go runtime")
+		}
+
+		if m.GoBuildEnv.GOOS == "" ||
+			m.GoBuildEnv.GOARCH == "" ||
+			(m.GoBuildEnv.CGOEnabled != "0" && m.GoBuildEnv.CGOEnabled != "1") {
+			return errors.New("capsule: invalid Go build environment")
 		}
 	}
 

@@ -156,3 +156,53 @@ jobs:
             echo "Go Capture/Replay E2E did not pass"
             exit 1
           fi
+
+  macos-e2e:
+    name: macOS to Linux Docker E2E
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Set up Docker
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Host: $(uname -s)/$(uname -m)"
+
+          brew install colima docker
+          colima start --cpu 2 --memory 4 --arch aarch64 --binfmt
+
+          docker version
+          docker info --format '{{.OSType}}/{{.Architecture}}'
+
+          echo "DOCKER_HOST=$(docker context inspect colima --format '{{.Endpoints.docker.Host}}')" >> "$GITHUB_ENV"
+
+          docker run --rm --platform linux/amd64 \
+            alpine:3.20 uname -m
+
+      - name: Test macOS Capture to Docker Replay
+        shell: bash
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: |
+          set -euo pipefail
+
+          go test -count=1 -v -timeout 360s \
+            ./cmd/buildfossil \
+            -run '^TestCaptureReplayMacOSGoEndToEnd$' \
+            | tee /tmp/buildfossil-macos-e2e.log
+
+          if ! grep -q -- '--- PASS: TestCaptureReplayMacOSGoEndToEnd' \
+            /tmp/buildfossil-macos-e2e.log; then
+            echo "macOS cross-platform E2E did not pass"
+            exit 1
+          fi

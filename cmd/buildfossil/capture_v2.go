@@ -26,6 +26,27 @@ func captureCommandV2(
 		return 2
 	}
 
+	detectedRuntime := capsule.DetectRuntime(
+		argv,
+		workspaceRoot,
+	)
+
+	var goBuildEnv *capsule.GoBuildEnvironment
+
+	if detectedRuntime != nil && detectedRuntime.Kind == "go" {
+		env, err := capsule.InspectGoBuildEnvironment(workspaceRoot)
+		if err != nil {
+			fmt.Fprintf(
+				os.Stderr,
+				"buildfossil: inspect Go build environment: %v\n",
+				err,
+			)
+			return 125
+		}
+
+		goBuildEnv = &env
+	}
+
 	result, err := execution.RunInDir(
 		argv,
 		workspaceRoot,
@@ -49,10 +70,8 @@ func captureCommandV2(
 
 	manifest := capsule.Manifest{
 		SchemaVersion: capsule.SchemaVersionV2,
-		Runtime: capsule.DetectRuntime(
-			argv,
-			workspaceRoot,
-		),
+		Runtime:       detectedRuntime,
+		GoBuildEnv:    goBuildEnv,
 		Execution: capsule.Execution{
 			Argv:            result.Argv,
 			WorkingDir:      ".",

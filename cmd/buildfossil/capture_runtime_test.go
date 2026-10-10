@@ -11,6 +11,9 @@ import (
 )
 
 func TestCaptureV2DetectsGoRuntime(t *testing.T) {
+	t.Setenv("CGO_ENABLED", "0")
+	t.Setenv("GOFLAGS", "")
+
 	output, err := exec.Command("go", "version").Output()
 	if err != nil {
 		t.Skipf("Go toolchain unavailable: %v", err)
@@ -72,6 +75,28 @@ func TestCaptureV2DetectsGoRuntime(t *testing.T) {
 			got,
 			capsule.SupportedGoVersion,
 		)
+	}
+
+	if verified.Manifest.GoBuildEnv == nil {
+		t.Fatal("captured manifest has no Go build environment")
+	}
+
+	goEnv := verified.Manifest.GoBuildEnv
+
+	if goEnv.GOOS == "" || goEnv.GOARCH == "" {
+		t.Fatalf("missing Go target platform: %+v", goEnv)
+	}
+
+	if goEnv.CGOEnabled != "0" && goEnv.CGOEnabled != "1" {
+		t.Fatalf("invalid CGO_ENABLED: %q", goEnv.CGOEnabled)
+	}
+
+	if goEnv.CGOEnabled != "0" {
+		t.Fatalf("CGO_ENABLED = %q, want 0", goEnv.CGOEnabled)
+	}
+
+	if goEnv.GOFLAGS != "" {
+		t.Fatalf("GOFLAGS = %q, want empty", goEnv.GOFLAGS)
 	}
 
 	if got := verified.Manifest.Execution.ExitCode; got != 1 {
