@@ -157,6 +157,47 @@ jobs:
             exit 1
           fi
 
+      - name: Schema v3 Docker runner E2E
+        shell: bash
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: |
+          set -euo pipefail
+
+          go test -count=1 -v -timeout 8m \
+            ./internal/runtime/docker \
+            -run '^(TestSDKOfflineExecRunner|TestSDKOfflineExecCancelAfterCommandStarted)$' \
+            | tee "$RUNNER_TEMP/buildfossil-v3-docker.log"
+
+          if grep -q -- '--- SKIP:' "$RUNNER_TEMP/buildfossil-v3-docker.log"; then
+            echo "Schema v3 Docker tests were unexpectedly skipped"
+            exit 1
+          fi
+
+      - name: Schema v3 Replay API and CLI E2E
+        shell: bash
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: |
+          set -euo pipefail
+
+          go test -count=1 -v -timeout 5m \
+            ./internal/replay \
+            -run '^TestReplayV3OfflineGoFailure$' \
+            | tee "$RUNNER_TEMP/buildfossil-v3-replay.log"
+
+          if ! grep -q -- '--- PASS: TestReplayV3OfflineGoFailure' \
+            "$RUNNER_TEMP/buildfossil-v3-replay.log"; then
+            echo "Schema v3 Replay E2E did not pass"
+            exit 1
+          fi
+
+          if grep -q -- '--- SKIP:' "$RUNNER_TEMP/buildfossil-v3-replay.log"; then
+            echo "Schema v3 Replay E2E was unexpectedly skipped"
+            exit 1
+          fi
+
+
   macos-capture:
     name: macOS ARM64 Go Capture
     runs-on: macos-15
@@ -197,6 +238,32 @@ jobs:
             echo "macOS Go Capture test did not pass"
             exit 1
           fi
+
+      - name: Schema v3 Capture tests on macOS ARM64
+        shell: bash
+        env:
+          CGO_ENABLED: "0"
+          GOFLAGS: ""
+        run: |
+          set -euo pipefail
+
+          go test -count=1 -v -timeout 3m \
+            ./cmd/buildfossil \
+            -run '^TestCaptureV3' \
+            | tee "$RUNNER_TEMP/buildfossil-v3-macos-capture.log"
+
+          if grep -q -- '--- FAIL:\|--- SKIP:' \
+            "$RUNNER_TEMP/buildfossil-v3-macos-capture.log"; then
+            echo "Schema v3 macOS Capture tests failed or skipped"
+            exit 1
+          fi
+
+          if ! grep -q -- '--- PASS: TestCaptureV3CreatesVerifiedCapsule' \
+            "$RUNNER_TEMP/buildfossil-v3-macos-capture.log"; then
+            echo "Schema v3 Capture test did not pass"
+            exit 1
+          fi
+
 
   cross-platform-capture:
     name: Cross-platform Go Capture
