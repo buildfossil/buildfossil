@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="assets/brand/logo.svg" alt="BuildFossil" width="340">
+  <img src="assets/brand/l0g0.svg" alt="BuildFossil" width="340">
 
   <h3>Capture a failed Go build. Replay the failure offline.</h3>
 
