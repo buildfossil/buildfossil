@@ -378,3 +378,136 @@ jobs:
             echo "Expected REPRODUCED outcome"
             exit 1
           fi
+
+  cross-platform-v3-capture:
+    name: Schema v3 Capture on macOS ARM64
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Verify host architecture
+        run: |
+          test "$(uname -s)" = Darwin
+          test "$(uname -m)" = arm64
+          go version
+
+      - name: Build BuildFossil CLI
+        run: go build -o buildfossil ./cmd/buildfossil
+
+      - name: Capture real Go dependency failure
+        shell: bash
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+          GOFLAGS: ""
+          GOTOOLCHAIN: local
+        run: |
+          set -euo pipefail
+
+          cd testdata/cross-platform-go-v3
+
+          # Populate Go module cache and create go.sum.
+          go mod download
+
+          test -s go.sum
+
+          # Capture must not need a module proxy.
+          export GOPROXY=off
+          export GOSUMDB=off
+
+          set +e
+          ../../buildfossil capture --v3 \
+            --include go.mod \
+            --include go.sum \
+            --include main.go \
+            -- go build ./...
+          capture_exit=$?
+          set -e
+
+          echo "Capture exit code: $capture_exit"
+
+          if [ "$capture_exit" -ne 1 ]; then
+            echo "Expected original Go compilation failure"
+            exit 1
+          fi
+
+          test -s failure.bfc
+
+          cp failure.bfc "$RUNNER_TEMP/buildfossil-v3.bfc"
+
+      - name: Upload schema v3 capsule
+        uses: actions/upload-artifact@v6
+        with:
+          name: cross-platform-go-v3-capsule
+          path: ${{ runner.temp }}/buildfossil-v3.bfc
+          if-no-files-found: error
+          retention-days: 7
+
+  cross-platform-v3-replay:
+    name: Schema v3 Replay on Linux AMD64
+    runs-on: ubuntu-24.04
+    needs: cross-platform-v3-capture
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Download macOS capsule
+        uses: actions/download-artifact@v6
+        with:
+          name: cross-platform-go-v3-capsule
+          path: ${{ runner.temp }}/buildfossil-v3
+
+      - name: Build BuildFossil CLI
+        run: go build -o buildfossil ./cmd/buildfossil
+
+      - name: Replay transferred capsule offline
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(uname -s)" = Linux
+          test "$(uname -m)" = x86_64
+
+          docker version
+
+          capsule="$RUNNER_TEMP/buildfossil-v3/buildfossil-v3.bfc"
+          test -s "$capsule"
+
+          set +e
+          ./buildfossil replay --v3 --allow-command "$capsule" \
+            > "$RUNNER_TEMP/v3-replay.stdout" \
+            2> "$RUNNER_TEMP/v3-replay.stderr"
+          replay_exit=$?
+          set -e
+
+          cat "$RUNNER_TEMP/v3-replay.stdout"
+          cat "$RUNNER_TEMP/v3-replay.stderr"
+
+          if [ "$replay_exit" -ne 0 ]; then
+            echo "Schema v3 replay failed: $replay_exit"
+            exit 1
+          fi
+
+          if ! grep -q 'Outcome: *reproduced' \
+            "$RUNNER_TEMP/v3-replay.stdout"; then
+            echo "Expected reproduced outcome"
+            exit 1
+          fi
+
+          echo "CROSS-PLATFORM SCHEMA V3: PASS"
