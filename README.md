@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="assets/brand/logo.svg" alt="BuildFossil" width="340">
+  <img src="assets/img/logo.svg" alt="BuildFossil" width="340">
 
   <h3>Capture a failed Go build. Replay the failure offline.</h3>
 
@@ -295,6 +295,18 @@ The next priorities include:
 5. Evaluating support for larger Go dependency graphs.
 
 Features outside the documented supported scenarios should not be assumed to work.
+
+## Contributing
+
+BuildFossil welcomes early contributors interested in Go, DevOps, build reproducibility, container infrastructure, and developer tools.
+
+Contributions can include bug reports, tests, documentation, code improvements, and technical discussions.
+
+Check the open Issues for `good first issue` and `help wanted` tasks.
+
+For larger changes, please open an Issue to discuss the approach before submitting a Pull Request.
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 ## License
 
