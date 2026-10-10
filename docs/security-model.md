@@ -1,110 +1,165 @@
-# Replay Staging Security Model
 
-This document describes the trust assumptions and integrity boundaries
-of BuildFossil schema-v3 replay staging.
+# Replay Snapshot Security Model
 
-For general security policy, vulnerability reporting, and safe usage
+This document describes the integrity boundaries and trust assumptions
+of BuildFossil schema-v3 offline replay.
+
+For the general security policy, vulnerability reporting, and safe usage
 guidance, see [SECURITY.md](../SECURITY.md).
 
-BuildFossil remains experimental and is not a security sandbox for
-arbitrary hostile workloads.
+BuildFossil remains experimental. Docker execution is not a security
+sandbox for arbitrary hostile workloads.
 
 ## Scope
 
-This document covers the path from a verified schema-v3 capsule to
-execution inside the Docker replay container.
+Schema-v3 replay currently supports a constrained Go build scenario
+with exactly one direct external module dependency.
 
-The current implementation supports a constrained Go build replay
-with one direct external module dependency.
+This document describes the path from a verified `.bfc` capsule to
+execution in a restricted Docker container.
 
-## Staging Lifecycle
+## Snapshot Lifecycle
 
-Schema-v3 replay currently:
+The current schema-v3 replay implementation:
 
-1. Reads and validates the capsule.
-2. Creates a private temporary staging root.
-3. Restores verified workspace files.
-4. Prepares a verified Go module download cache.
-5. Re-verifies the restored workspace.
-6. Prepares the Docker replay image and container.
-7. Bind-mounts the staged workspace and module cache read-only.
-8. Executes the captured build command.
-9. Cleans up the temporary staging root and execution container.
+1. Opens and verifies the `.bfc` capsule.
+2. Validates workspace metadata, file contents, and Go module artifacts.
+3. Builds a workspace TAR from verified capsule bytes.
+4. Builds a Go module download-cache TAR from verified artifacts.
+5. Creates two uniquely named Docker-managed volumes.
+6. Uploads the TAR archives using the Docker Engine API.
+7. Removes the temporary preparation containers.
+8. Creates a restricted execution container with both volumes mounted
+   read-only.
+9. Copies the module cache into a writable container tmpfs.
+10. Materializes the module offline and executes the captured command.
+11. Compares the replay exit code and stderr with the captured failure.
+12. Removes the execution container and Docker volumes.
 
-## Integrity Guarantees
+The active schema-v3 replay path does not restore the workspace into
+host staging directories or use host bind mounts for replay inputs.
 
-The implementation validates capsule structure, recorded file metadata,
-workspace contents, dependency artifacts, and supported paths.
+## Integrity Properties
 
-Workspace restoration uses root-relative filesystem operations and
-exclusive file creation to reduce path traversal and replacement risks.
+BuildFossil verifies capsule structure, recorded file metadata,
+workspace contents, and dependency artifacts.
 
-Staging verification detects unexpected files, symbolic links,
-missing files, and content changes present at verification time.
+Snapshot archives are constructed from previously verified data held
+by the replay process, rather than by rereading mutable host staging
+files.
 
-These checks do not guarantee immutable host files throughout replay.
+The snapshot builders repeat relevant content and checksum validation
+before constructing TAR archives.
+
+This removes the previous dependency on host staging directories
+remaining unchanged between verification and Docker consumption.
+
+However, this does not establish absolute snapshot immutability.
+
+Docker-managed volumes are writable during preparation. They are
+mounted read-only in the execution container, but the Docker daemon
+and other sufficiently privileged actors may still alter their
+contents.
+
+## Docker Execution Restrictions
+
+The execution container uses:
+
+- A pinned Go replay image.
+- Linux AMD64 execution.
+- Disabled container networking.
+- Non-root UID:GID.
+- A read-only container root filesystem.
+- Read-only workspace and module-cache volumes.
+- No inherited host workspace bind mount.
+- Dropped Linux capabilities.
+- `no-new-privileges`.
+- CPU, memory, and PID limits.
+- Writable tmpfs mounts for temporary files and Go caches.
+
+Both execution volume mounts use Docker's `NoCopy` option.
+
+The preparation containers have different access requirements
+because they are used to populate Docker volumes.
+
+These controls reduce risk but do not make Docker equivalent to
+a dedicated virtual-machine isolation boundary.
 
 ## Trust Assumptions
 
-The security model assumes:
+The design assumes:
 
 - The host operating system and Docker daemon are trusted.
-- The replay process runs without root privileges.
-- Private staging directories are not accessible to unrelated
-  unprivileged operating-system users.
-- Processes running under the same host UID are not considered
-  mutually isolated security principals.
-- Privileged host processes are outside the staging isolation boundary.
+- The user trusts the source of the capsule.
+- The replay process does not run as root.
+- The container runtime and host kernel are correctly maintained.
+- Privileged host processes and Docker administrators are outside
+  the snapshot isolation boundary.
 
-## Remaining TOCTOU Concern
+Processes with access to the Docker daemon may be able to alter
+volumes or interfere with replay.
 
-There is an interval between verification of the staged workspace
-and Docker consuming its contents.
+## Resource Cleanup
 
-Read-only bind mounts restrict writes from the container, but do not
-prevent a sufficiently privileged host process from modifying the
-mounted source files.
+BuildFossil attempts to remove:
 
-The same consideration applies to the staged Go module cache.
+1. Temporary preparation containers.
+2. The execution container.
+3. Both Docker-managed volumes.
 
-Repeating verification immediately before container creation would
-reduce the interval but would not eliminate this class of race.
+Cleanup uses independent timeout contexts so that cancellation of
+the replay context does not automatically prevent resource removal.
 
-No claim of absolute staging immutability is made.
+Errors encountered during cleanup are reported alongside execution
+errors when possible.
 
-## Docker Boundary
+Cleanup is best-effort, not transactional.
 
-Replay uses restricted Docker execution, including disabled container
-networking, a read-only root filesystem, non-root execution, dropped
-capabilities, and resource restrictions.
+If the Docker daemon becomes unavailable, a process terminates
+unexpectedly, or an API operation has an indeterminate outcome,
+resources may remain and require manual inspection.
 
-These protections do not make Docker equivalent to a dedicated
-virtual-machine isolation boundary.
+Docker snapshot volumes can be inspected using:
 
-The Docker daemon, container runtime, and host kernel remain trusted
-components of the execution environment.
+```sh
+docker volume ls --filter label=org.buildfossil.component=snapshot
+```
+
+## Remaining Risks
+
+The snapshot architecture does not protect against:
+
+- A compromised or malicious Docker daemon.
+- Host-kernel or container-runtime vulnerabilities.
+- Malicious source code with valid checksums.
+- Arbitrary execution commands in untrusted capsules.
+- Resource exhaustion outside configured limits.
+- Every possible Docker API failure or cleanup race.
+- Concurrent volume modification by sufficiently privileged actors.
+- Unexpected process termination before cleanup completes.
+
+SHA-256 provides integrity checking, not publisher authentication.
+
+BuildFossil does not currently provide signed capsules or a
+trusted publisher identity system.
 
 ## Out of Scope
 
-The current design does not defend against:
+The current experimental implementation is not intended for:
 
-- Host processes with sufficient filesystem permissions to modify
-  staging concurrently.
-- A compromised or malicious Docker daemon.
-- Container-runtime or host-kernel vulnerabilities.
-- Malicious source code merely because its archive checksums are valid.
-- Arbitrary execution of untrusted capsules as a supported safe workflow.
+- Arbitrary hostile code execution.
+- Untrusted third-party capsule execution.
+- General-purpose dependency graph replay.
+- Multi-platform container execution.
+- Strong isolation from the Docker daemon or host kernel.
 
 ## Future Hardening
 
-Potential improvements require separate threat analysis and tests:
+Areas requiring further review include:
 
-- Reducing the time between verification and execution.
-- Evaluating isolation mechanisms that do not depend on mutable
-  host bind-mounted inputs.
-- Additional adversarial tests for staging and module-cache behavior.
-- Stronger isolation for scenarios involving untrusted workloads.
-
-Any proposed implementation must preserve offline replay,
-cross-platform capture/replay behavior, and the existing supported
-Go build scenario.
+- Linux AMD64 CI integration tests.
+- Cleanup under Docker daemon disconnection.
+- Resource reconciliation for orphaned volumes and containers.
+- Adversarial tests for snapshot construction and extraction.
+- Stronger isolation for untrusted execution.
+- Independent security review before a stable release.

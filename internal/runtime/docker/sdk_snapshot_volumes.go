@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/containerd/errdefs"
 	"github.com/moby/moby/api/types/mount"
 	"github.com/moby/moby/client"
 )
@@ -88,6 +89,14 @@ func CreateSnapshotVolumes(
 			return nil, err
 		}
 
+		// Record the generated name before contacting Docker.
+		// The API request may succeed even if its response is lost.
+		if snapshot.kind == "workspace" {
+			volumes.Workspace = name
+		} else {
+			volumes.ModuleCache = name
+		}
+
 		_, err = dockerClient.VolumeCreate(
 			ctx,
 			client.VolumeCreateOptions{
@@ -103,12 +112,6 @@ func CreateSnapshotVolumes(
 				"docker SDK: create %s volume: %w",
 				snapshot.kind, err,
 			)
-		}
-
-		if snapshot.kind == "workspace" {
-			volumes.Workspace = name
-		} else {
-			volumes.ModuleCache = name
 		}
 
 		// Use a temporary container solely as a Docker API
@@ -134,13 +137,8 @@ func CreateSnapshotVolumes(
 			},
 		}
 
-		// Preparation containers use the locally available
-		// image platform. Execution platform is configured
-		// separately by the replay executor.
-		options.Platform = nil
-
 		created, err := dockerClient.ContainerCreate(ctx, options)
-		if err != nil {
+		if err != nil && !errdefs.IsNotFound(err) {
 			return nil, fmt.Errorf(
 				"docker SDK: create %s preparation container: %w",
 				snapshot.kind, err,

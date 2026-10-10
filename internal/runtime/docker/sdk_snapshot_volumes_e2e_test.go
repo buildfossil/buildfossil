@@ -60,6 +60,8 @@ func TestSnapshotVolumesEndToEnd(t *testing.T) {
 		_ = dockerClient.Close()
 	})
 
+	ensureSnapshotTestImage(t, dockerClient)
+
 	workspaceTAR := snapshotTestTAR(
 		t, "main.go", "original-workspace\n",
 	)
@@ -70,7 +72,7 @@ func TestSnapshotVolumesEndToEnd(t *testing.T) {
 	volumes, err := CreateSnapshotVolumes(
 		ctx,
 		dockerClient,
-		"alpine:3.21",
+		goReplayImage,
 		workspaceTAR,
 		moduleTAR,
 	)
@@ -112,7 +114,7 @@ func TestSnapshotVolumesEndToEnd(t *testing.T) {
 	)
 
 	options.Platform = nil
-	options.Config.Image = "alpine:3.21"
+	options.Config.Image = goReplayImage
 	options.Config.WorkingDir = "/"
 
 	options.HostConfig.Mounts = []mount.Mount{
@@ -285,6 +287,8 @@ func TestSnapshotVolumesRollbackOnSecondUploadFailure(t *testing.T) {
 	}
 	defer dockerClient.Close()
 
+	ensureSnapshotTestImage(t, dockerClient)
+
 	workspaceTAR := snapshotTestTAR(
 		t, "main.go", "valid-workspace\n",
 	)
@@ -295,7 +299,7 @@ func TestSnapshotVolumesRollbackOnSecondUploadFailure(t *testing.T) {
 	volumes, err := CreateSnapshotVolumes(
 		ctx,
 		dockerClient,
-		"alpine:3.21",
+		goReplayImage,
 		workspaceTAR,
 		invalidModuleTAR,
 	)
@@ -345,11 +349,12 @@ func TestSnapshotVolumesCloseAfterCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer dockerClient.Close()
+	ensureSnapshotTestImage(t, dockerClient)
 
 	volumes, err := CreateSnapshotVolumes(
 		ctx,
 		dockerClient,
-		"alpine:3.21",
+		goReplayImage,
 		snapshotTestTAR(t, "main.go", "workspace\n"),
 		snapshotTestTAR(t, "module.txt", "module\n"),
 	)
@@ -397,4 +402,71 @@ func TestSnapshotVolumesCloseAfterCancellation(t *testing.T) {
 	}
 
 	t.Log("CANCELLATION CLEANUP: PASS")
+}
+
+func TestSnapshotVolumesPinnedGoImage(t *testing.T) {
+	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+		t.Skip("Docker integration test disabled")
+	}
+
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		180*time.Second,
+	)
+	defer cancel()
+
+	dockerClient, err := NewSDKClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = dockerClient.Close()
+	})
+
+	runtime := &RuntimeSpec{
+		Kind:    "go",
+		Version: "1.26.6",
+	}
+
+	image, err := selectReplayImage(runtime)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	prepareCtx, cancelPrepare := context.WithTimeout(
+		ctx,
+		120*time.Second,
+	)
+	err = ensureReplayImage(prepareCtx, dockerClient, image)
+	cancelPrepare()
+	if err != nil {
+		t.Fatalf("prepare pinned Go image: %v", err)
+	}
+
+	volumes, err := CreateSnapshotVolumes(
+		ctx,
+		dockerClient,
+		image,
+		snapshotTestTAR(t, "main.go", "package main\n"),
+		snapshotTestTAR(t, "module.txt", "module-data\n"),
+	)
+	if err != nil {
+		t.Fatalf("create snapshots using pinned Go image: %v", err)
+	}
+
+	workspaceName := volumes.Workspace
+	moduleName := volumes.ModuleCache
+
+	t.Cleanup(func() {
+		if err := volumes.Close(); err != nil {
+			t.Errorf("cleanup pinned image snapshots: %v", err)
+		}
+	})
+
+	if workspaceName == "" || moduleName == "" ||
+		workspaceName == moduleName {
+		t.Fatal("expected two distinct snapshot volumes")
+	}
+
+	t.Log("PINNED GO IMAGE SNAPSHOT PREPARATION: PASS")
 }
