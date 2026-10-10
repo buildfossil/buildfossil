@@ -249,7 +249,7 @@ jobs:
           echo "macOS capsule created successfully"
 
       - name: Upload captured capsule
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cross-platform-go-capsule
           path: ${{ runner.temp }}/cross-platform-go.bfc
@@ -272,7 +272,7 @@ jobs:
           cache: false
 
       - name: Download macOS capsule
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: cross-platform-go-capsule
           path: ${{ runner.temp }}/buildfossil-capsule
