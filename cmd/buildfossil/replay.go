@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"strings"
@@ -118,7 +119,7 @@ func runReplay(args []string) int {
 	fmt.Printf("Outcome:            %s\n", result.Outcome)
 
 	if useV3 && options.MemoryBytes != 0 {
-		fmt.Printf("Replay memory:      %s\\n", replayMemoryLabel(options.MemoryBytes))
+		printReplayMemory(os.Stdout, options.MemoryBytes)
 	}
 
 	if result.GoDependencies != nil {
@@ -141,6 +142,10 @@ func runReplay(args []string) int {
 	default:
 		return 125
 	}
+}
+
+func printReplayMemory(w io.Writer, memoryBytes int64) {
+	fmt.Fprintf(w, "Replay memory:      %s\n", replayMemoryLabel(memoryBytes))
 }
 
 func replayMemoryLabel(memoryBytes int64) string {
