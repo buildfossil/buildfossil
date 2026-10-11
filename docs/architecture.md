@@ -110,16 +110,21 @@ For the current supported dependency scenario, both `go.mod` and `go.sum` must b
 
 ## Go Dependency Capture
 
-The implementation supports up to sixteen selected external Go modules,
-including transitive dependencies.
+The development implementation supports up to 64 selected external Go
+modules, including transitive dependencies. At most 16 modules may require
+complete ZIP artifacts.
 
-Capture first resolves the selected module graph offline using
-`go list -m -json all`. It then reads the required Go module cache artifacts:
+Capture first resolves the complete selected module graph offline using
+`go list -m -json all`. It also inspects `go list -deps -e -json ./...`
+to identify modules needed by build packages.
+
+For build-required modules, Capture reads complete cache artifacts:
 
 - `.zip`
 - `.mod`
 - `.info`
 
+Other selected modules retain graph metadata without full ZIP content.
 The module path and version determine the expected artifact locations.
 
 Capture also runs `go mod graph` with Go module proxy access disabled.

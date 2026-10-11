@@ -2,7 +2,8 @@
 
 ## Status
 
-This document describes the current experimental schema-v3 implementation.
+This document describes the current development schema-v3 implementation,
+not the published v0.1.0-alpha.2 binaries.
 
 BuildFossil is not production-ready. Supported scenarios are intentionally narrow, and successful reproduction is not guaranteed outside the tested configurations.
 
@@ -13,7 +14,7 @@ BuildFossil is not production-ready. Supported scenarios are intentionally narro
 | Capture language | Go |
 | Go toolchain | Go 1.26.6 |
 | Captured command | `go build ./...` |
-| External modules | Up to 16 selected external modules, including transitive dependencies; offline graph resolution required |
+| External modules | Up to 64 selected external modules; up to 16 full ZIP modules; offline graph resolution required |
 | Dependency artifacts | `.zip`, `.mod`, `.info` |
 | Dependency verification | Go module h1 checksums and artifact integrity |
 | Workspace capture | Explicitly included regular files |
@@ -30,7 +31,8 @@ BuildFossil is not production-ready. Supported scenarios are intentionally narro
 
 The schema-v3 implementation enforces:
 
-- Maximum 16 selected external Go modules.
+- Maximum 64 selected external Go modules.
+- Maximum 16 modules with full ZIP artifacts.
 - Maximum 64 additional graph-only `.mod` files, 1 MiB combined.
 - Maximum 16 MiB combined module artifact data.
 - Maximum 16 MiB total `.bfc` archive size.
@@ -39,8 +41,9 @@ The schema-v3 implementation enforces:
 - Maximum 10 MiB per workspace file.
 - Maximum 14 MiB combined workspace file data.
 
-All selected external modules must have their `.zip`, `.mod`, and
-`.info` artifacts available in the local Go module download cache.
+Build-required external modules need complete `.zip`, `.mod`, and `.info`
+artifacts in the local Go module download cache. Other selected modules
+require metadata sufficient for offline graph verification.
 
 Additional module versions referenced by `go mod graph`, but not selected
 for the build, require their cached `.mod` metadata. These graph-only
@@ -104,7 +107,8 @@ limit. Capsules requiring graph-only module metadata add the optional
 `go_graph_mod_files` manifest field and corresponding verified artifacts.
 
 BuildFossil v0.1.0-alpha.2 readers support at most eight external
-Go modules. They reject schema-v3 capsules containing 9–16 modules.
+Go modules. The development implementation allows 64 selected modules,
+but older readers must not be assumed to accept new selective-capture capsules.
 
 The current reader has been tested against a previously valid
 v0.1.0-alpha.2 schema-v3 capsule and reproduced its recorded failure.
@@ -114,13 +118,15 @@ even when the selected module count is within their supported limit.
 
 ## Go Dependency Restrictions
 
-The current prototype supports up to sixteen selected external Go
-modules, including transitive dependencies, provided their verified
-artifacts are already present in the local Go module cache.
+The development implementation supports up to 64 selected external Go
+modules, including transitive dependencies, with at most 16 modules
+requiring full ZIP artifacts. Required module metadata and ZIP artifacts
+must already be available in the local Go module cache.
 
 Unsupported or unverified configurations include:
 
-- Dependency graphs containing more than sixteen selected external modules
+- Dependency graphs containing more than 64 selected external modules
+- Builds requiring more than 16 full ZIP modules
 - Missing offline module-cache artifacts
 - Workspace configurations using `go.work`
 - Local replacements
