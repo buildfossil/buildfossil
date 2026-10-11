@@ -51,6 +51,18 @@ func captureCommandV3(
 		return 125
 	}
 
+	if err := goBuildEnv.ValidatePortableGoBuild(); err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: unsupported portable Go environment: %v\n", err)
+		return 125
+	}
+
+	if err := checkCaptureOutputAvailableV3(output); err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: capture output: %v\n", err)
+		return 125
+	}
+
 	beforeFiles, err := capsule.ReadWorkspaceFilesV2(
 		workspaceRoot,
 		includes,

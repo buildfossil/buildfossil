@@ -46,6 +46,9 @@ func requireNoCaptureV3Archive(t *testing.T, path string) {
 }
 
 func TestCaptureV3SuccessDoesNotCreateArchive(t *testing.T) {
+	t.Setenv("CGO_ENABLED", "0")
+	t.Setenv("GOFLAGS", "")
+	t.Setenv("GOWORK", "off")
 	workspace := t.TempDir()
 	output := filepath.Join(t.TempDir(), "failure.bfc")
 

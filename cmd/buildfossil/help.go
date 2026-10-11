@@ -27,6 +27,9 @@ Usage:
 
 Requirements:
   Go 1.26.6
+  GOOS/GOARCH: darwin/arm64 or linux/amd64
+  CGO_ENABLED=0 and empty GOFLAGS
+  GOWORK=off when a Go workspace is active
   Explicitly include go.mod, go.sum, and required source files
   At most eight external Go modules, including transitive dependencies
   Active Go workspaces are unsupported
@@ -39,6 +42,8 @@ Example:
     -- go build ./...
 
 The resulting capsule is saved as failure.bfc.
+Existing output files are never overwritten.
+Move or rename failure.bfc before another capture.
 Capture supports only the exact command go build ./... in schema v3.`)
 }
 

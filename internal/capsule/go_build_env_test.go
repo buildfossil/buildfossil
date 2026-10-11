@@ -21,6 +21,15 @@ func TestValidatePortableGoBuild(t *testing.T) {
 			},
 		},
 		{
+			name: "supported linux amd64",
+			env: GoBuildEnvironment{
+				GOOS:       "linux",
+				GOARCH:     "amd64",
+				CGOEnabled: "0",
+				GOFLAGS:    "",
+			},
+		},
+		{
 			name: "CGO enabled",
 			env: GoBuildEnvironment{
 				GOOS:       "darwin",
