@@ -94,6 +94,19 @@ The current development version reports `buildfossil dev`.
 
 No stable release or binary distribution is provided yet.
 
+## Command-Line Help
+
+After building BuildFossil, you can inspect its available commands:
+
+    ./buildfossil --help
+    ./buildfossil capture --help
+    ./buildfossil replay --help
+    ./buildfossil --version
+
+The `capture` and `replay` help commands describe the supported schema-v3
+workflow. Older experimental modes remain available but are not the
+recommended starting point.
+
 ## Quick Start: Capture a Go Build Failure
 
 The following example creates a small Go project with one external dependency and an intentional compiler error.
