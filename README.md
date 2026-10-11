@@ -213,6 +213,23 @@ Run:
 /path/to/buildfossil replay --v3 --allow-command failure.bfc
 ```
 
+When Replay v3 returns `different_failure` (exit code `11`), it also
+reports the category of the mismatch:
+
+- `exit codes differ`: the original and replayed commands exited with different codes.
+- `stderr differs`: exit codes match, but the captured and replayed standard error differ.
+
+For example:
+
+    Original exit code: 1
+    Replay exit code:   1
+    Outcome:            different_failure
+    Difference:         stderr differs
+
+BuildFossil does not print the full stderr difference. If the captured or
+replayed stderr was truncated, the comparison is `inconclusive` rather than
+claiming a complete mismatch.
+
 Schema-v3 replay uses 256 MiB of container memory by default.
 
 For memory-intensive builds or AMD64 emulation on ARM64, use:

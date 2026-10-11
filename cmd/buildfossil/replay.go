@@ -118,6 +118,15 @@ func runReplay(args []string) int {
 	fmt.Printf("Replay exit code:   %d\n", result.ReplayExitCode)
 	fmt.Printf("Outcome:            %s\n", result.Outcome)
 
+	if useV3 && result.Outcome == replay.OutcomeDifferent {
+		switch result.Difference {
+		case replay.DifferenceExitCode:
+			fmt.Println("Difference:         exit codes differ")
+		case replay.DifferenceStderr:
+			fmt.Println("Difference:         stderr differs")
+		}
+	}
+
 	if useV3 && options.MemoryBytes != 0 {
 		printReplayMemory(os.Stdout, options.MemoryBytes)
 	}

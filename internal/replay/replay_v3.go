@@ -132,5 +132,12 @@ func RunV3WithOptions(
 		OriginalExitCode: verified.Manifest.Execution.ExitCode,
 		ReplayExitCode:   code,
 		Outcome:          outcome,
+		Difference: DiagnoseFailureDifferenceV3(
+			outcome,
+			verified.Manifest.Execution.ExitCode,
+			verified.Manifest.Execution.Stderr,
+			code,
+			stderr.Bytes(),
+		),
 	}, nil
 }

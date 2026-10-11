@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -337,5 +338,79 @@ func main() {
 
 	t.Log("CLI REPLAY V3: PASS")
 	t.Logf("CLI OUTPUT:\n%s", output)
+
+	if result.Difference != "" {
+		t.Fatalf("reproduced failure has difference %q", result.Difference)
+	}
+
+	if strings.Contains(output, "Difference:") {
+		t.Fatalf("reproduced CLI unexpectedly displayed difference:\n%s", output)
+	}
+
+	// Create a separately verified capsule with intentionally different
+	// recorded stderr. The replayed build itself remains unchanged.
+	differentManifest := manifest
+	differentManifest.Execution.Stderr = "intentionally different diagnostic\n"
+
+	var differentArchive bytes.Buffer
+	if err := capsule.WriteWorkspaceV3(
+		&differentArchive, differentManifest, files, artifacts,
+	); err != nil {
+		t.Fatalf("write different-failure capsule: %v", err)
+	}
+
+	differentPath := filepath.Join(t.TempDir(), "different.bfc")
+	if err := os.WriteFile(
+		differentPath, differentArchive.Bytes(), 0600,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := capsule.ReadVerifiedV3(differentPath); err != nil {
+		t.Fatalf("verify different-failure capsule: %v", err)
+	}
+
+	differentResult, err := RunV3WithOptions(
+		ctx,
+		differentPath,
+		Options{AllowArbitraryCommand: true},
+	)
+	if err != nil {
+		t.Fatalf("Replay v3 different failure: %v", err)
+	}
+
+	if differentResult.Outcome != OutcomeDifferent {
+		t.Fatalf("outcome=%q, want %q",
+			differentResult.Outcome, OutcomeDifferent)
+	}
+	if differentResult.Difference != DifferenceStderr {
+		t.Fatalf("difference=%q, want %q",
+			differentResult.Difference, DifferenceStderr)
+	}
+
+	differentCLI := exec.CommandContext(
+		ctx, cliBinary,
+		"replay", "--v3", "--allow-command", differentPath,
+	)
+	differentOutput, cliErr := differentCLI.CombinedOutput()
+
+	var exitErr *exec.ExitError
+	if !errors.As(cliErr, &exitErr) || exitErr.ExitCode() != 11 {
+		t.Fatalf("different CLI exit=%v, want code 11:\n%s",
+			cliErr, differentOutput)
+	}
+
+	if !strings.Contains(
+		string(differentOutput),
+		"Outcome:            different_failure\n",
+	) || !strings.Contains(
+		string(differentOutput),
+		"Difference:         stderr differs\n",
+	) {
+		t.Fatalf("unexpected different-failure CLI output:\n%s",
+			differentOutput)
+	}
+
+	t.Log("SCHEMA V3 DIFFERENCE DIAGNOSTICS: PASS")
 
 }
