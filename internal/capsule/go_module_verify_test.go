@@ -12,7 +12,7 @@ import (
 	"golang.org/x/mod/sumdb/dirhash"
 )
 
-func makeGoModuleFixture(t *testing.T) (
+func makeGoModuleFixture(t testing.TB) (
 	GoModuleV3,
 	map[string][]byte,
 	[]byte,

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func makeWorkspaceV3Fixture(t *testing.T) (
+func makeWorkspaceV3Fixture(t testing.TB) (
 	Manifest,
 	[]WorkspaceFile,
 	map[string][]byte,
