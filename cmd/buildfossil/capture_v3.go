@@ -65,7 +65,7 @@ func captureCommandV3(
 		return 125
 	}
 
-	beforeFiles, err := capsule.ReadWorkspaceFilesV2(
+	beforeFiles, err := capsule.ReadWorkspaceFilesV3(
 		workspaceRoot,
 		includes,
 	)

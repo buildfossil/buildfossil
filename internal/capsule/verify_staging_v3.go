@@ -84,7 +84,7 @@ func VerifyStagedWorkspaceV3(
 		return fmt.Errorf("capsule: walk staged workspace: %w", err)
 	}
 
-	files, err := ReadWorkspaceFilesV2(root, paths)
+	files, err := ReadWorkspaceFilesV3(root, paths)
 	if err != nil {
 		return fmt.Errorf("capsule: reread staged workspace: %w", err)
 	}

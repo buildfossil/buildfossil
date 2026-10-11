@@ -152,8 +152,11 @@ func (m Manifest) Validate() error {
 	case SchemaVersionV1:
 		workspaceErr = m.Workspace.Validate()
 
-	case SchemaVersionV2, SchemaVersionV3:
+	case SchemaVersionV2:
 		workspaceErr = validateWorkspaceV2(m.Workspace)
+
+	case SchemaVersionV3:
+		workspaceErr = validateWorkspaceV3(m.Workspace)
 	}
 
 	if workspaceErr != nil {

@@ -10,7 +10,15 @@ import (
 )
 
 func ReadWorkspaceFilesV2(root string, paths []string) ([]WorkspaceFile, error) {
-	if len(paths) > MaxWorkspaceV2Files {
+	return readWorkspaceFilesWithLimit(root, paths, MaxWorkspaceV2Files)
+}
+
+func ReadWorkspaceFilesV3(root string, paths []string) ([]WorkspaceFile, error) {
+	return readWorkspaceFilesWithLimit(root, paths, MaxWorkspaceV3Files)
+}
+
+func readWorkspaceFilesWithLimit(root string, paths []string, maxFiles int) ([]WorkspaceFile, error) {
+	if len(paths) > maxFiles {
 		return nil, fmt.Errorf("capsule: too many workspace files")
 	}
 
