@@ -1,0 +1,115 @@
+name: Alpha Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Candidate version (vX.Y.Z-alpha.N)"
+        required: true
+        type: string
+      dry_run:
+        description: "Build and test without requiring a tag"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate alpha candidate
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate version and source
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-alpha\.[1-9][0-9]*$ ]]; then
+            echo "Invalid release version"
+            exit 1
+          fi
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "DRY RUN: validating checkout $(git rev-parse HEAD)"
+          else
+            git fetch origin main --tags
+
+            tag_commit="$(git rev-parse --verify "refs/tags/$RELEASE_VERSION^{commit}")"
+            main_commit="$(git rev-parse origin/main)"
+
+            if [[ "$tag_commit" != "$main_commit" ]]; then
+              echo "Release tag must match current main"
+              exit 1
+            fi
+
+            git checkout --detach "$tag_commit"
+            echo "Validated tagged candidate: $tag_commit"
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Check formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(gofmt -l ./cmd ./internal)"
+          test -z "$files"
+
+      - name: Run Go tests
+        run: go test -count=1 ./...
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Verify Docker
+        run: |
+          docker version
+          docker info
+
+      - name: Run Docker E2E
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: go test -p 1 -count=1 -timeout 15m ./...
+
+      - name: Build release archives
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          ./scripts/build-release.sh "$RELEASE_VERSION" dist
+
+      - name: Verify checksums and archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+
+          sha256sum -c SHA256SUMS
+
+          test "$(find . -maxdepth 1 -name '*.tar.gz' | wc -l)" -eq 2
+
+          for archive in ./*.tar.gz; do
+            test "$(tar -tzf "$archive")" = "buildfossil"
+          done
+
+      - name: Upload candidate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildfossil-alpha-candidate
+          path: dist/*
+          if-no-files-found: error
