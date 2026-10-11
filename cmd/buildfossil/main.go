@@ -30,7 +30,7 @@ func run(args []string) int {
 			fmt.Fprintln(os.Stderr, "Usage: buildfossil --version")
 			return 2
 		}
-		fmt.Println("buildfossil dev")
+		fmt.Println("buildfossil " + buildfossilVersion())
 		return 0
 	case "capture-demo":
 		return runCaptureDemo(args[1:])
@@ -40,7 +40,7 @@ func run(args []string) int {
 			fmt.Fprintln(os.Stderr, "Usage: buildfossil version")
 			return 2
 		}
-		fmt.Println("buildfossil dev")
+		fmt.Println("buildfossil " + buildfossilVersion())
 		return 0
 
 	case "capture":

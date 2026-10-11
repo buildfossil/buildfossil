@@ -90,7 +90,9 @@ BUILDFOSSIL_BIN="$(pwd)/buildfossil"
 ./buildfossil version
 ```
 
-The current development version reports `buildfossil dev`.
+Locally built development binaries normally report `buildfossil dev`.
+Binaries installed from a tagged Go module report the module version.
+Official release binaries can embed their version at build time.
 
 No stable release or binary distribution is provided yet.
 
