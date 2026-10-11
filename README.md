@@ -46,9 +46,9 @@ The schema-v3 prototype supports:
 
 - Go 1.26.6.
 - The exact command `go build ./...`.
-- Up to sixteen selected external Go modules, including transitive dependencies.
+- Up to 64 selected external Go modules, including transitive dependencies; up to 16 with full ZIP artifacts.
 - Selected regular workspace files.
-- Verified `.zip`, `.mod`, and `.info` artifacts for every selected external module.
+- Verified full `.zip`, `.mod`, and `.info` artifacts for build-required modules; metadata-only artifacts for other selected modules.
 - SHA-256 and Go module checksum verification.
 - Captured stdout, stderr, exit code, and build environment metadata.
 - Offline replay inside a Linux AMD64 Docker container.
@@ -401,15 +401,15 @@ The current schema-v3 implementation:
 
 - Supports only the exact command `go build ./...`.
 - Requires Go 1.26.6.
-- Supports up to sixteen selected external Go modules, including transitive dependencies.
+- Supports up to 64 selected external Go modules, including transitive dependencies, with at most 16 full ZIP modules.
 - Requires explicit inclusion of `go.mod` and necessary source files.
   Existing `go.sum` files must be included; dependency-free projects
   without `go.sum` are supported.
 - Does not support active Go workspaces (`go.work`), `replace`,
   or `exclude` directives.
-- Requires the selected module graph and all module download artifacts
-  to be available locally during offline capture.
-- Rejects module graphs containing more than sixteen selected external modules.
+- Requires the selected module graph and all required full or metadata-only
+  module artifacts to be available locally during offline capture.
+- Rejects module graphs containing more than 64 selected external modules or builds requiring more than 16 full ZIP modules.
 - Captures up to 64 additional graph-only `.mod` files, with a combined
   size limit of 1 MiB, when older module versions are needed for offline
   dependency graph reconstruction.
