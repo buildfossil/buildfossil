@@ -104,6 +104,18 @@ func RunWithOptions(
 		return result, fmt.Errorf("replay: Docker execution: %w", err)
 	}
 
+	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") == "1" {
+		fmt.Fprintf(
+			os.Stderr,
+			"REPLAY_DIAGNOSTIC original_exit=%d replay_exit=%d original_stderr=%q replay_stderr=%q truncated=%t\\n",
+			verified.Manifest.Execution.ExitCode,
+			code,
+			verified.Manifest.Execution.Stderr,
+			string(stderr.Bytes()),
+			stderr.Truncated(),
+		)
+	}
+
 	outcome, err := CompareFailure(
 		verified.Manifest.Execution.ExitCode,
 		verified.Manifest.Execution.Stderr,

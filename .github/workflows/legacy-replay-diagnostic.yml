@@ -1,0 +1,29 @@
+name: Legacy Replay Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - "internal/replay/**"
+      - ".github/workflows/legacy-replay-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Run legacy Replay integration test
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: |
+          go test -count=1 -v -timeout 2m \
+            ./internal/replay \
+            -run '^TestReplayIntegration$'
