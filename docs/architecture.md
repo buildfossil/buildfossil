@@ -40,9 +40,13 @@ buildfossil capture --v3
         |
         +-- Inspect Go build environment
         |
+        +-- Read selected workspace files
+        |
         +-- Execute original Go build
         |
-        +-- On failure, collect selected workspace files
+        +-- On failure, verify workspace consistency
+        |
+        +-- Resolve selected Go module graph offline
         |
         +-- Read dependency artifacts from Go module cache
         |
@@ -58,16 +62,18 @@ buildfossil replay --v3 --allow-command
         |
         +-- Check platform and runtime compatibility
         |
-        +-- Create temporary staging directories
+        +-- Construct verified workspace and module-cache TAR snapshots
         |
-        +-- Restore and verify captured workspace
+        +-- Upload snapshots into Docker-managed volumes
         |
-        +-- Stage Go module artifacts
+        +-- Mount volumes read-only in the execution container
         |
         v
 Restricted Docker container
         |
         +-- Prepare offline module cache
+        |
+        +-- Verify exact selected Go module graph
         |
         +-- Execute recorded Go build
         |
@@ -102,9 +108,11 @@ For the current supported dependency scenario, both `go.mod` and `go.sum` must b
 
 ## Go Dependency Capture
 
-The implementation currently supports exactly one direct external Go module dependency.
+The implementation supports up to eight selected external Go modules,
+including transitive dependencies.
 
-Dependency capture reads Go module cache artifacts:
+Capture first resolves the selected module graph offline using
+`go list -m -json all`. It then reads the required Go module cache artifacts:
 
 - `.zip`
 - `.mod`
@@ -114,9 +122,12 @@ The module path and version determine the expected artifact locations.
 
 Captured artifacts are checked against the supported module format and the checksums recorded in `go.sum`.
 
-This is not a general dependency resolver.
+Module graph resolution disables proxy access and uses the local
+module cache. Missing artifacts and unsupported module configurations
+are rejected rather than silently downloaded or captured.
 
-Unsupported module configurations are rejected rather than silently captured.
+The selected graph is checked again inside the Docker replay container
+before the recorded build command is executed.
 
 ## Capsule Format
 
@@ -163,10 +174,11 @@ Before Docker execution, the replay path:
 1. Verifies the capsule.
 2. Evaluates runtime and platform compatibility.
 3. Requires explicit command-execution authorization.
-4. Creates temporary staging directories.
-5. Restores workspace files.
-6. Checks staged workspace integrity.
-7. Stages the required dependency artifacts.
+4. Builds workspace and module-cache TAR snapshots from verified data.
+5. Uploads snapshots into Docker-managed volumes.
+6. Mounts both volumes read-only in the execution container.
+7. Prepares the offline module cache and verifies the exact module graph
+   before executing the captured command.
 
 The replay implementation does not reconstruct an entire original machine, operating system, or CI runner.
 

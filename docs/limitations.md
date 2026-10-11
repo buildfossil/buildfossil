@@ -13,7 +13,7 @@ BuildFossil is not production-ready. Supported scenarios are intentionally narro
 | Capture language | Go |
 | Go toolchain | Go 1.26.6 |
 | Captured command | `go build ./...` |
-| External modules | Exactly one direct require entry in go.mod; transitive dependency graphs are not supported |
+| External modules | Up to 8 selected external modules, including transitive dependencies; offline graph resolution required |
 | Dependency artifacts | `.zip`, `.mod`, `.info` |
 | Dependency verification | Go module h1 checksums and artifact integrity |
 | Workspace capture | Explicitly included regular files |
@@ -25,6 +25,34 @@ BuildFossil is not production-ready. Supported scenarios are intentionally narro
 | Failure comparison | Exit code and stderr |
 | Capsule provenance authentication | Not supported |
 | Untrusted capsule execution | Not supported as a safe use case |
+
+## Size and Module Limits
+
+The schema-v3 implementation enforces:
+
+- Maximum 8 selected external Go modules.
+- Maximum 16 MiB combined module artifact data.
+- Maximum 16 MiB total `.bfc` archive size.
+- Maximum 64 explicitly included workspace files.
+- Maximum 10 MiB per workspace file.
+- Maximum 14 MiB combined workspace file data.
+
+All selected external modules must have their `.zip`, `.mod`, and
+`.info` artifacts available in the local Go module download cache.
+
+The complete selected module graph must match the verified manifest
+inside the offline Docker container before the recorded command runs.
+
+## Capture Consistency
+
+The original Go build runs on the capture host, not in the restricted
+replay container.
+
+Capture reads explicitly included workspace files before execution
+and checks their contents again after execution and before packaging.
+
+These checks are not an atomic filesystem snapshot. Concurrent changes
+that are reversed between checks may escape detection.
 
 ## Verified Cross-Platform Scenario
 
@@ -64,12 +92,14 @@ These restrictions allow the implementation to make more explicit assumptions ab
 
 ## Go Dependency Restrictions
 
-The current prototype requires exactly one direct external module dependency.
+The current prototype supports up to eight selected external Go
+modules, including transitive dependencies, provided their verified
+artifacts are already present in the local Go module cache.
 
 Unsupported or unverified configurations include:
 
-- Multiple direct dependencies
-- General transitive dependency graphs
+- Dependency graphs containing more than eight external modules
+- Missing offline module-cache artifacts
 - Workspace configurations using `go.work`
 - Local replacements
 - Unsupported `replace` or `exclude` directives

@@ -46,9 +46,9 @@ The schema-v3 prototype supports:
 
 - Go 1.26.6.
 - The exact command `go build ./...`.
-- Zero or one direct external Go module dependency.
+- Up to eight selected external Go modules, including transitive dependencies.
 - Selected regular workspace files.
-- Verified Go module `.zip`, `.mod`, and `.info` artifacts when a dependency is present.
+- Verified `.zip`, `.mod`, and `.info` artifacts for every selected external module.
 - SHA-256 and Go module checksum verification.
 - Captured stdout, stderr, exit code, and build environment metadata.
 - Offline replay inside a Linux AMD64 Docker container.
@@ -210,7 +210,7 @@ A schema-v3 `.bfc` capsule contains:
 - Selected workspace files and their integrity metadata.
 - Captured build environment information.
 - Zero dependency artifacts for dependency-free builds, or three
-  verified Go module artifacts for one supported external dependency.
+  verified artifacts per selected external Go module (up to eight modules).
 - Recorded command output and exit status.
 
 The archive is verified before replay. Workspace and module-cache
@@ -245,20 +245,24 @@ The current schema-v3 implementation:
 
 - Supports only the exact command `go build ./...`.
 - Requires Go 1.26.6.
-- Supports zero or one direct external Go module dependency.
+- Supports up to eight selected external Go modules, including transitive dependencies.
 - Requires explicit inclusion of `go.mod` and `go.sum`, even for
   dependency-free builds.
 - Does not support active Go workspaces (`go.work`), `replace`,
-  `exclude`, or multiple external Go modules.
-- Does not support indirect-only dependency configurations.
-- Does not support arbitrary dependency graphs.
+  or `exclude` directives.
+- Requires the selected module graph and all module download artifacts
+  to be available locally during offline capture.
+- Rejects module graphs containing more than eight external modules.
+- Does not support arbitrary-sized dependency graphs.
 - Does not support general-purpose CI job capture.
 - Requires workspace files to be explicitly included.
 - Does not create a complete filesystem or process snapshot.
 - Does not guarantee reproduction across all host and target platforms.
 - Does not authenticate capsule origin.
 - Is not approved for executing untrusted capsules.
-- Has unresolved security-hardening work, including staging race considerations.
+- Uses non-atomic workspace consistency checks during capture;
+  concurrent changes may still escape detection.
+- Has unresolved security-hardening work, including filesystem race considerations.
 
 Replaying a captured failure can produce a different result or fail when the supported reproducibility assumptions are not met.
 
@@ -322,7 +326,7 @@ The next priorities include:
 2. Hardening the replay staging and execution path.
 3. Expanding reproducibility tests.
 4. Improving failure diagnostics.
-5. Evaluating support for larger Go dependency graphs.
+5. Evaluating support for module graphs beyond eight external dependencies.
 
 Features outside the documented supported scenarios should not be assumed to work.
 

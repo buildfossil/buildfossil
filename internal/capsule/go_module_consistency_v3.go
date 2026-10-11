@@ -6,8 +6,12 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-// ValidateGoModuleConsistencyV3 checks that the captured go.mod
-// agrees with the dependencies declared in the v3 manifest.
+// ValidateGoModuleConsistencyV3 checks that every root go.mod
+// requirement exists in the manifest with the same version.
+//
+// Additional manifest modules may be transitive dependencies.
+// This check does not prove that the manifest contains the
+// complete selected Go module graph.
 func ValidateGoModuleConsistencyV3(
 	goMod []byte,
 	modules []GoModuleV3,
@@ -27,36 +31,38 @@ func ValidateGoModuleConsistencyV3(
 		)
 	}
 
-	if len(parsed.Require) > MaxGoModulesV3 {
-		return fmt.Errorf("capsule: unsupported Go dependency count")
-	}
-
 	if err := ValidateGoModulesV3(modules); err != nil {
 		return err
 	}
 
-	if len(parsed.Require) != len(modules) {
+	// A dependency-free root module must not declare
+	// unrelated external modules.
+	if len(parsed.Require) == 0 && len(modules) != 0 {
 		return fmt.Errorf(
-			"capsule: go.mod dependencies do not match manifest",
+			"capsule: unexpected Go modules for dependency-free workspace",
 		)
 	}
 
-	if len(parsed.Require) == 0 {
-		return nil
+	selected := make(map[string]string, len(modules))
+	for _, mod := range modules {
+		selected[mod.Path] = mod.Version
 	}
 
-	required := parsed.Require[0]
-	if required.Indirect {
-		return fmt.Errorf(
-			"capsule: indirect-only dependency is unsupported",
-		)
-	}
+	for _, required := range parsed.Require {
+		version, ok := selected[required.Mod.Path]
+		if !ok {
+			return fmt.Errorf(
+				"capsule: required Go module missing from manifest: %s",
+				required.Mod.Path,
+			)
+		}
 
-	if required.Mod.Path != modules[0].Path ||
-		required.Mod.Version != modules[0].Version {
-		return fmt.Errorf(
-			"capsule: go.mod module identity does not match manifest",
-		)
+		if version != required.Mod.Version {
+			return fmt.Errorf(
+				"capsule: Go module version mismatch for %s",
+				required.Mod.Path,
+			)
+		}
 	}
 
 	return nil

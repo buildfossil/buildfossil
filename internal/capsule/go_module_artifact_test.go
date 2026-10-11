@@ -1,6 +1,7 @@
 package capsule
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -111,9 +112,16 @@ func TestValidateGoModulesV3RejectsInvalidMetadata(t *testing.T) {
 }
 
 func TestValidateGoModulesV3RejectsTooManyModules(t *testing.T) {
-	mod := validGoModuleV3()
+	modules := make([]GoModuleV3, MaxGoModulesV3+1)
 
-	if err := ValidateGoModulesV3([]GoModuleV3{mod, mod}); err == nil {
+	for i := range modules {
+		modules[i] = multiModuleFixture(
+			i+1,
+			fmt.Sprintf("example.com/module%02d", i+1),
+		)
+	}
+
+	if err := ValidateGoModulesV3(modules); err == nil {
 		t.Fatal("expected module count limit error")
 	}
 }
