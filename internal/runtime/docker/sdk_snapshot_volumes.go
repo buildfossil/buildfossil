@@ -48,6 +48,21 @@ func CreateSnapshotVolumes(
 	dockerClient *client.Client,
 	image string,
 	workspaceTAR, moduleTAR []byte,
+) (*SnapshotVolumes, error) {
+	return createSnapshotVolumesWithNameGenerator(
+		ctx, dockerClient, image, workspaceTAR, moduleTAR,
+		newSnapshotVolumeName,
+	)
+}
+
+// createSnapshotVolumesWithNameGenerator permits deterministic resource
+// identification in tests while production uses random volume names.
+func createSnapshotVolumesWithNameGenerator(
+	ctx context.Context,
+	dockerClient *client.Client,
+	image string,
+	workspaceTAR, moduleTAR []byte,
+	generateName func() (string, error),
 ) (result *SnapshotVolumes, err error) {
 	if dockerClient == nil {
 		return nil, fmt.Errorf("docker SDK: nil client")
@@ -84,7 +99,7 @@ func CreateSnapshotVolumes(
 			return nil, err
 		}
 
-		name, err := newSnapshotVolumeName()
+		name, err := generateName()
 		if err != nil {
 			return nil, err
 		}
