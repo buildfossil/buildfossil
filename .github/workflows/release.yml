@@ -81,6 +81,11 @@ jobs:
           docker version
           docker info
 
+      - name: Prepare Docker test image
+        run: |
+          docker pull alpine:3.21
+          docker image inspect alpine:3.21
+
       - name: Run Docker E2E
         env:
           BUILDFOSSIL_DOCKER_TEST: "1"
