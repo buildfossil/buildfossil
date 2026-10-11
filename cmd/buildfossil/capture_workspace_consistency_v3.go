@@ -52,7 +52,7 @@ func verifyCapturedWorkspaceV3(
 	includes []string,
 	expected []capsule.WorkspaceFile,
 ) error {
-	current, err := capsule.ReadWorkspaceFilesV2(
+	current, err := capsule.ReadWorkspaceFilesV3(
 		workspaceRoot,
 		includes,
 	)

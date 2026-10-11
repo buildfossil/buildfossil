@@ -2,6 +2,7 @@ package capsule
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -145,19 +146,38 @@ func TestManifestV3RejectsInvalidConfiguration(t *testing.T) {
 	}
 }
 
-func TestManifestV3UsesWorkspaceV2Limits(t *testing.T) {
-	m := validManifestV3()
-
-	for i := 0; i <= MaxWorkspaceV2Files; i++ {
-		m.Workspace.Files = append(m.Workspace.Files, FileMetadata{
-			Path:   "file-" + strings.Repeat("x", i),
-			Size:   1,
-			SHA256: "sha256:" + strings.Repeat("a", 64),
-		})
+func TestManifestV3WorkspaceFileLimits(t *testing.T) {
+	makeFiles := func(count int) []FileMetadata {
+		files := make([]FileMetadata, 0, count)
+		for i := 0; i < count; i++ {
+			files = append(files, FileMetadata{
+				Path:   fmt.Sprintf("file-%03d", i),
+				Size:   1,
+				SHA256: "sha256:" + strings.Repeat("a", 64),
+			})
+		}
+		return files
 	}
 
-	if err := m.Validate(); err == nil {
-		t.Fatal("v3 accepted workspace exceeding v2 file count limit")
+	for _, tc := range []struct {
+		name    string
+		count   int
+		wantErr bool
+	}{
+		{"64 files", 64, false},
+		{"65 files", 65, false},
+		{"256 files", 256, false},
+		{"257 files", 257, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := validManifestV3()
+			m.Workspace.Files = makeFiles(tc.count)
+
+			err := m.Validate()
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("Validate() error = %v, wantErr %v", err, tc.wantErr)
+			}
+		})
 	}
 }
 

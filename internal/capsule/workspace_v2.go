@@ -15,7 +15,15 @@ const (
 const MaxWorkspaceV2PathBytes = 90
 
 func validateWorkspaceV2(workspace Workspace) error {
-	if len(workspace.Files) > MaxWorkspaceV2Files {
+	return validateWorkspaceWithFileLimit(workspace, MaxWorkspaceV2Files)
+}
+
+func validateWorkspaceV3(workspace Workspace) error {
+	return validateWorkspaceWithFileLimit(workspace, MaxWorkspaceV3Files)
+}
+
+func validateWorkspaceWithFileLimit(workspace Workspace, maxFiles int) error {
+	if len(workspace.Files) > maxFiles {
 		return fmt.Errorf("capsule: too many workspace files")
 	}
 

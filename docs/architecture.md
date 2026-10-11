@@ -104,6 +104,8 @@ If it fails, BuildFossil requires complete, nonempty stderr and attempts to pack
 
 The user must explicitly select workspace files using `--include`.
 
+Schema v3 accepts at most 256 included regular workspace files, while schema v2 retains its existing 64-file limit. The combined workspace data limit remains 14 MiB, with a maximum of 10 MiB per file. These limits are enforced during capture, manifest validation, verified reading, and staging verification.
+
 For the current supported dependency scenario, both `go.mod` and `go.sum` must be included.
 
 ## Go Dependency Capture

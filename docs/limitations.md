@@ -34,7 +34,8 @@ The schema-v3 implementation enforces:
 - Maximum 64 additional graph-only `.mod` files, 1 MiB combined.
 - Maximum 16 MiB combined module artifact data.
 - Maximum 16 MiB total `.bfc` archive size.
-- Maximum 64 explicitly included workspace files.
+- Maximum 256 explicitly included workspace files for schema v3.
+- Schema v2 retains its 64-file workspace limit.
 - Maximum 10 MiB per workspace file.
 - Maximum 14 MiB combined workspace file data.
 
