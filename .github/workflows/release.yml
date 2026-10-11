@@ -86,6 +86,19 @@ jobs:
           docker pull alpine:3.21
           docker image inspect alpine:3.21
 
+      - name: Test legacy Replay cold-pull
+        shell: bash
+        env:
+          BUILDFOSSIL_DOCKER_TEST: "1"
+        run: |
+          set -euo pipefail
+          docker image rm alpine:3.20 >/dev/null 2>&1 || true
+          if docker image inspect alpine:3.20 >/dev/null 2>&1; then
+            echo "Expected alpine:3.20 to be absent"
+            exit 1
+          fi
+          go test -count=1 -v -timeout 2m ./internal/replay -run '^TestReplayIntegration$'
+
       - name: Run Docker E2E
         env:
           BUILDFOSSIL_DOCKER_TEST: "1"

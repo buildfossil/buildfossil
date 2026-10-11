@@ -19,10 +19,15 @@ func Run(
 		return 0, fmt.Errorf("docker: empty command")
 	}
 
+	if err := ensureLegacyImage(ctx); err != nil {
+		return 0, err
+	}
+
 	args := []string{
 		"run",
 		"--rm",
 		"--platform", "linux/amd64",
+		"--pull", "never",
 		"--network", "none",
 		"--cap-drop", "ALL",
 		"--security-opt", "no-new-privileges",
@@ -79,10 +84,15 @@ func RunWithUser(
 		return 0, fmt.Errorf("docker: empty container user")
 	}
 
+	if err := ensureLegacyImage(ctx); err != nil {
+		return 0, err
+	}
+
 	args := []string{
 		"run",
 		"--rm",
 		"--platform", "linux/amd64",
+		"--pull", "never",
 		"--network", "none",
 		"--cap-drop", "ALL",
 		"--security-opt", "no-new-privileges",
