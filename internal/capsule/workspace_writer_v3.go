@@ -104,12 +104,29 @@ func WriteWorkspaceV3(
 		return fmt.Errorf("capsule: invalid v3 manifest: %w", err)
 	}
 
+	selectedArtifacts, graphArtifacts, err := SplitGoArtifactsV3(
+		manifest.GoModules,
+		manifest.GoGraphModFiles,
+		artifacts,
+	)
+	if err != nil {
+		return fmt.Errorf("capsule: split Go artifacts: %w", err)
+	}
+
 	if err := VerifyGoModuleArtifactSetV3(
 		manifest.GoModules,
-		artifacts,
+		selectedArtifacts,
 		goSum,
 	); err != nil {
 		return fmt.Errorf("capsule: verify Go module set: %w", err)
+	}
+
+	if err := VerifyGoGraphModArtifactSetV3(
+		manifest.GoGraphModFiles,
+		graphArtifacts,
+		goSum,
+	); err != nil {
+		return fmt.Errorf("capsule: verify Go graph metadata: %w", err)
 	}
 
 	manifestData, err := json.Marshal(manifest)
@@ -177,6 +194,22 @@ func WriteWorkspaceV3(
 					err,
 				)
 			}
+		}
+	}
+
+	for _, graphFile := range manifest.GoGraphModFiles {
+		name := graphFile.Artifact.Path
+		data := graphArtifacts[name]
+
+		if err := writeEntry(
+			"dependencies/"+name,
+			data,
+			0600,
+		); err != nil {
+			return fmt.Errorf(
+				"capsule: write Go graph artifact %q: %w",
+				name, err,
+			)
 		}
 	}
 

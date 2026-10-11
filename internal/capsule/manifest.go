@@ -15,14 +15,15 @@ const (
 )
 
 type Manifest struct {
-	SchemaVersion  int                 `json:"schema_version"`
-	Execution      Execution           `json:"execution"`
-	Platform       Platform            `json:"platform"`
-	Workspace      Workspace           `json:"workspace"`
-	Runtime        *Runtime            `json:"runtime,omitempty"`
-	GoBuildEnv     *GoBuildEnvironment `json:"go_build_env,omitempty"`
-	GoDependencies *GoDependencyStatus `json:"go_dependencies,omitempty"`
-	GoModules      []GoModuleV3        `json:"go_modules,omitempty"`
+	SchemaVersion   int                 `json:"schema_version"`
+	Execution       Execution           `json:"execution"`
+	Platform        Platform            `json:"platform"`
+	Workspace       Workspace           `json:"workspace"`
+	Runtime         *Runtime            `json:"runtime,omitempty"`
+	GoBuildEnv      *GoBuildEnvironment `json:"go_build_env,omitempty"`
+	GoDependencies  *GoDependencyStatus `json:"go_dependencies,omitempty"`
+	GoModules       []GoModuleV3        `json:"go_modules,omitempty"`
+	GoGraphModFiles []GoGraphModFileV3  `json:"go_graph_mod_files,omitempty"`
 }
 
 type Workspace struct {
@@ -122,7 +123,7 @@ func (m Manifest) Validate() error {
 		}
 	}
 
-	if m.SchemaVersion != SchemaVersionV3 && len(m.GoModules) != 0 {
+	if m.SchemaVersion != SchemaVersionV3 && (len(m.GoModules) != 0 || len(m.GoGraphModFiles) != 0) {
 		return errors.New("capsule: Go modules require schema version 3")
 	}
 
@@ -138,6 +139,9 @@ func (m Manifest) Validate() error {
 		}
 
 		if err := ValidateGoModulesV3(m.GoModules); err != nil {
+			return err
+		}
+		if err := ValidateGoGraphModFilesV3(m.GoGraphModFiles); err != nil {
 			return err
 		}
 	}

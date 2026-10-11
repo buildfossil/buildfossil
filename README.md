@@ -409,7 +409,12 @@ The current schema-v3 implementation:
   or `exclude` directives.
 - Requires the selected module graph and all module download artifacts
   to be available locally during offline capture.
-- Rejects module graphs containing more than eight external modules.
+- Rejects module graphs containing more than sixteen selected external modules.
+- Captures up to 64 additional graph-only `.mod` files, with a combined
+  size limit of 1 MiB, when older module versions are needed for offline
+  dependency graph reconstruction.
+- Requires those additional `.mod` files to be present in the local Go
+  module cache and verified against `/go.mod` entries in `go.sum`.
 - Does not support arbitrary-sized dependency graphs.
 - Does not support general-purpose CI job capture.
 - Requires workspace files to be explicitly included.

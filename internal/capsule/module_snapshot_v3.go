@@ -68,13 +68,34 @@ func BuildGoModuleSnapshotV3(
 		return nil, fmt.Errorf("capsule: missing go.sum")
 	}
 
+	selectedArtifacts, graphArtifacts, err := SplitGoArtifactsV3(
+		verified.Manifest.GoModules,
+		verified.Manifest.GoGraphModFiles,
+		verified.Artifacts,
+	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"capsule: split module artifacts: %w", err,
+		)
+	}
+
 	if err := VerifyGoModuleArtifactSetV3(
 		verified.Manifest.GoModules,
-		verified.Artifacts,
+		selectedArtifacts,
 		goSum,
 	); err != nil {
 		return nil, fmt.Errorf(
 			"capsule: invalid module artifact set: %w", err,
+		)
+	}
+
+	if err := VerifyGoGraphModArtifactSetV3(
+		verified.Manifest.GoGraphModFiles,
+		graphArtifacts,
+		goSum,
+	); err != nil {
+		return nil, fmt.Errorf(
+			"capsule: invalid graph module artifacts: %w", err,
 		)
 	}
 
@@ -128,6 +149,53 @@ func BuildGoModuleSnapshotV3(
 					"capsule: write module TAR content: %w", err,
 				)
 			}
+		}
+	}
+
+	for _, graphFile := range verified.Manifest.GoGraphModFiles {
+		escapedPath, err := module.EscapePath(graphFile.Path)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"capsule: escape graph module path: %w", err,
+			)
+		}
+
+		escapedVersion, err := module.EscapeVersion(graphFile.Version)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"capsule: escape graph module version: %w", err,
+			)
+		}
+
+		name := graphFile.Artifact.Path
+		data, ok := verified.Artifacts[name]
+		if !ok {
+			return nil, fmt.Errorf(
+				"capsule: missing graph module artifact %q", name,
+			)
+		}
+
+		header := &tar.Header{
+			Name: path.Join(
+				"cache", "download",
+				escapedPath, "@v",
+				escapedVersion+".mod",
+			),
+			Mode:     0644,
+			Size:     int64(len(data)),
+			Typeflag: tar.TypeReg,
+		}
+
+		if err := writer.WriteHeader(header); err != nil {
+			return nil, fmt.Errorf(
+				"capsule: write graph module TAR header: %w", err,
+			)
+		}
+
+		if _, err := writer.Write(data); err != nil {
+			return nil, fmt.Errorf(
+				"capsule: write graph module TAR content: %w", err,
+			)
 		}
 	}
 

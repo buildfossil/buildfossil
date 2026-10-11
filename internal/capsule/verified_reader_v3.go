@@ -93,6 +93,10 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 		}
 	}
 
+	for _, graphFile := range result.Manifest.GoGraphModFiles {
+		expectedSize += tarEntrySize(graphFile.Artifact.Size)
+	}
+
 	if info.Size() != expectedSize {
 		return VerifiedCapsuleV3{}, fmt.Errorf(
 			"capsule: v3 archive size mismatch: expected %d, got %d",
@@ -256,6 +260,71 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 		return VerifiedCapsuleV3{}, fmt.Errorf(
 			"capsule: verify v3 Go module set: %w",
 			err,
+		)
+	}
+
+	// Read additional graph-only go.mod files after selected modules.
+	graphArtifacts := make(map[string][]byte, len(result.Manifest.GoGraphModFiles))
+
+	for _, graphFile := range result.Manifest.GoGraphModFiles {
+		metadata := graphFile.Artifact
+		name := metadata.Path
+
+		header, err := tr.Next()
+		if err != nil {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: read graph artifact %q: %w", name, err,
+			)
+		}
+
+		if header.Name != "dependencies/"+name ||
+			header.Typeflag != tar.TypeReg ||
+			header.Size != metadata.Size {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: invalid graph artifact entry %q", name,
+			)
+		}
+
+		data, err := io.ReadAll(
+			io.LimitReader(tr, MaxGoGraphModTotalSizeV3+1),
+		)
+		if err != nil {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: read graph artifact %q: %w", name, err,
+			)
+		}
+
+		if int64(len(data)) != metadata.Size {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: graph artifact size mismatch %q", name,
+			)
+		}
+
+		if err := VerifyGoGraphModFileV3(
+			graphFile, data, goSum,
+		); err != nil {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: invalid graph artifact %q: %w", name, err,
+			)
+		}
+
+		if _, exists := result.Artifacts[name]; exists {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: duplicate graph artifact %q", name,
+			)
+		}
+
+		graphArtifacts[name] = data
+		result.Artifacts[name] = data
+	}
+
+	if err := VerifyGoGraphModArtifactSetV3(
+		result.Manifest.GoGraphModFiles,
+		graphArtifacts,
+		goSum,
+	); err != nil {
+		return VerifiedCapsuleV3{}, fmt.Errorf(
+			"capsule: verify graph artifacts: %w", err,
 		)
 	}
 

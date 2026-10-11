@@ -116,3 +116,55 @@ The compilation failures in both projects were intentionally introduced.
 3. Investigate failures that produce different replay outcomes.
 4. Evaluate capsule portability under additional clean environments.
 5. Continue security and reproducibility hardening.
+
+---
+
+## Development Validation — 16 Real Go Modules and Offline Graph Metadata
+
+This section documents local development-branch validation performed on
+October 11, 2026. It is not a validation claim for the published
+v0.1.0-alpha.2 release.
+
+Configuration:
+
+- Capture host: macOS ARM64.
+- Go toolchain: Go 1.26.6.
+- Build target: Linux AMD64, `CGO_ENABLED=0`.
+- Command: `go build ./...`.
+- Selected external Go modules: 16.
+- Additional graph-only `.mod` files: 3, totalling 170 bytes.
+- Intentional failure: undefined `buildFossilMissingSymbol`.
+- Replay: Docker, with Go module proxy access disabled.
+
+The three additional graph-only module versions were:
+
+- `github.com/mattn/go-isatty@v0.0.16`
+- `golang.org/x/sys@v0.0.0-20220811171246-fbc7d0a398ab`
+- `golang.org/x/sys@v0.6.0`
+
+All three `.mod` artifacts were read from the local Go module cache
+and verified against their recorded module metadata checksums.
+
+The recorded and replayed errors matched byte-for-byte:
+
+    # example.com/buildfossil-real-modules-16
+    ./main.go:23:2: undefined: buildFossilMissingSymbol
+
+Observed results:
+
+| Replay memory limit | Outcome | CLI exit code |
+|---|---|---|
+| 256 MiB | reproduced | 0 |
+| 512 MiB | reproduced | 0 |
+| 1 GiB | reproduced | 0 |
+
+The current development reader also successfully replayed a
+v0.1.0-alpha.2 Cobra capsule containing six external Go modules.
+
+The full Docker-gated Go test suite passed on the development branch using:
+
+    BUILDFOSSIL_DOCKER_TEST=1 go test ./... -count=1 -timeout=10m
+
+These results confirm the tested configuration only. They do not
+establish general reproducibility across arbitrary Go builds,
+cross-machine environments, or naturally occurring CI failures.

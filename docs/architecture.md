@@ -120,6 +120,20 @@ Capture first resolves the selected module graph offline using
 
 The module path and version determine the expected artifact locations.
 
+Capture also runs `go mod graph` with Go module proxy access disabled.
+This identifies older or intermediate module versions whose `.mod`
+metadata may be required for offline graph reconstruction even though
+those versions are not selected for the build.
+
+These graph-only `.mod` files are stored separately from the selected
+modules' `.zip`, `.mod`, and `.info` artifacts. Capture permits at most
+64 graph-only metadata files with a combined size of 1 MiB. Each file
+is verified against SHA-256 and its corresponding `go.sum` `/go.mod`
+checksum before packaging.
+
+Replay reconstructs both sets inside the isolated container before
+checking the module graph and executing the recorded build.
+
 Captured artifacts are checked against the supported module format and the checksums recorded in `go.sum`.
 
 Module graph resolution disables proxy access and uses the local
