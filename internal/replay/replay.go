@@ -15,6 +15,7 @@ type Result struct {
 	OriginalExitCode int
 	ReplayExitCode   int
 	Outcome          Outcome
+	Difference       FailureDifference
 
 	// GoDependencies contains optional replay environment diagnostics.
 	// It does not affect Outcome.
