@@ -31,7 +31,7 @@ Requirements:
   CGO_ENABLED=0 and empty GOFLAGS
   GOWORK=off when a Go workspace is active
   Explicitly include go.mod, go.sum, and required source files
-  At most eight external Go modules, including transitive dependencies
+  At most sixteen external Go modules, including transitive dependencies
   Active Go workspaces are unsupported
 
 Example:

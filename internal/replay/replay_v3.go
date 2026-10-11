@@ -12,7 +12,7 @@ import (
 )
 
 // RunV3WithOptions replays a verified schema-v3 capsule with
-// up to eight embedded Go modules, without network access.
+// up to sixteen embedded Go modules, without network access.
 //
 // Experimental: uses Docker Exec, which is not equivalent to PID 1.
 func RunV3WithOptions(

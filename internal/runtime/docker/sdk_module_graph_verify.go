@@ -77,7 +77,7 @@ func parseDockerGoModuleGraph(data []byte) ([]ExpectedGoModule, error) {
 			Path: item.Path, Version: item.Version,
 		})
 
-		if len(modules) > 8 {
+		if len(modules) > 16 {
 			return nil, fmt.Errorf("docker SDK: module graph exceeds limit")
 		}
 	}
@@ -97,7 +97,7 @@ func compareDockerGoModuleGraph(
 	expected []ExpectedGoModule,
 	actual []ExpectedGoModule,
 ) error {
-	if len(expected) > 8 || len(expected) != len(actual) {
+	if len(expected) > 16 || len(expected) != len(actual) {
 		return fmt.Errorf("docker SDK: resolved Go module count mismatch")
 	}
 

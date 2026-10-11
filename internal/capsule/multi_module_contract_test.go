@@ -90,8 +90,8 @@ func TestMultiModuleV3AcceptsEightModules(t *testing.T) {
 	}
 }
 
-func TestMultiModuleV3RejectsNineModules(t *testing.T) {
-	modules := make([]GoModuleV3, 9)
+func TestMultiModuleV3RejectsSeventeenModules(t *testing.T) {
+	modules := make([]GoModuleV3, 17)
 	for i := range modules {
 		modules[i] = multiModuleFixture(
 			i+1,
@@ -100,7 +100,7 @@ func TestMultiModuleV3RejectsNineModules(t *testing.T) {
 	}
 
 	if err := ValidateGoModulesV3(modules); err == nil {
-		t.Fatal("nine modules accepted")
+		t.Fatal("seventeen modules accepted")
 	}
 }
 

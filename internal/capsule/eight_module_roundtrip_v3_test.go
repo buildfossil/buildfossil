@@ -103,33 +103,35 @@ func TestWriteReadV3EightModulesRoundTrip(t *testing.T) {
 	}
 }
 
-func TestWriteV3NineModulesRejectsWithoutOutput(t *testing.T) {
+func TestWriteV3SeventeenModulesRejectsWithoutOutput(t *testing.T) {
 	manifest, files, artifacts := makeEightModuleWorkspaceV3(t)
 
-	ninth, ninthArtifacts, ninthSum := makeIndexedGoModuleFixture(
-		t, 9, "example.com/module09",
-	)
+	for index := 9; index <= 17; index++ {
+		modulePath := fmt.Sprintf("example.com/module%02d", index)
+		mod, moduleArtifacts, moduleSum := makeIndexedGoModuleFixture(
+			t, index, modulePath,
+		)
 
-	manifest.GoModules = append(manifest.GoModules, ninth)
+		manifest.GoModules = append(manifest.GoModules, mod)
 
-	for name, data := range ninthArtifacts {
-		artifacts[name] = data
+		for name, data := range moduleArtifacts {
+			artifacts[name] = data
+		}
+
+		files[0].Data = bytes.Replace(
+			files[0].Data,
+			[]byte(")\n"),
+			[]byte(fmt.Sprintf("\t%s v1.0.0\n)\n", modulePath)),
+			1,
+		)
+		files[1].Data = append(files[1].Data, moduleSum...)
 	}
 
-	files[0].Data = bytes.Replace(
-		files[0].Data,
-		[]byte(")\n"),
-		[]byte("\texample.com/module09 v1.0.0\n)\n"),
-		1,
-	)
-	files[1].Data = append(files[1].Data, ninthSum...)
-
 	var output bytes.Buffer
-
 	err := WriteWorkspaceV3(&output, manifest, files, artifacts)
 
 	if err == nil {
-		t.Fatal("writer accepted nine modules")
+		t.Fatal("writer accepted seventeen modules")
 	}
 	if output.Len() != 0 {
 		t.Fatalf("writer emitted %d bytes before rejection", output.Len())
