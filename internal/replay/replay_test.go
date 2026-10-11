@@ -40,7 +40,7 @@ func TestReplayIntegration(t *testing.T) {
 	file := capsule.WorkspaceFile{
 		Path: "fixture.txt",
 		Data: []byte("BUILD_FOSSIL_TEST_FAILURE\n"),
-		Mode: 0600,
+		Mode: 0644,
 	}
 
 	if err := capsule.WriteFile(output, manifest, file); err != nil {
