@@ -78,7 +78,7 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 
 	if len(result.Manifest.GoModules) > MaxGoModulesV3 {
 		return VerifiedCapsuleV3{}, fmt.Errorf(
-			"capsule: v3 reader supports at most one Go module",
+			"capsule: too many Go modules",
 		)
 	}
 
@@ -87,8 +87,8 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 		result.Manifest.Workspace,
 	)
 
-	if len(result.Manifest.GoModules) == 1 {
-		for _, artifact := range result.Manifest.GoModules[0].Artifacts {
+	for _, mod := range result.Manifest.GoModules {
+		for _, artifact := range mod.Artifacts {
 			expectedSize += tarEntrySize(artifact.Size)
 		}
 	}
@@ -188,31 +188,17 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 
 	result.Artifacts = make(map[string][]byte)
 
-	if len(result.Manifest.GoModules) == 1 {
-		for _, name := range goArtifactNamesV3 {
-			var metadata *GoModuleArtifact
+	var totalArtifactSize int64
 
-			for i := range result.Manifest.GoModules[0].Artifacts {
-				artifact := &result.Manifest.GoModules[0].Artifacts[i]
-				if artifact.Path == name {
-					metadata = artifact
-					break
-				}
-			}
-
-			if metadata == nil {
-				return VerifiedCapsuleV3{}, fmt.Errorf(
-					"capsule: missing artifact metadata %q",
-					name,
-				)
-			}
+	for _, mod := range result.Manifest.GoModules {
+		for _, metadata := range mod.Artifacts {
+			name := metadata.Path
 
 			header, err := tr.Next()
 			if err != nil {
 				return VerifiedCapsuleV3{}, fmt.Errorf(
 					"capsule: read artifact %q: %w",
-					name,
-					err,
+					name, err,
 				)
 			}
 
@@ -225,11 +211,21 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 				)
 			}
 
+			remaining := MaxGoModuleTotalSizeV3 - totalArtifactSize
+			if remaining < 0 || metadata.Size > remaining {
+				return VerifiedCapsuleV3{}, fmt.Errorf(
+					"capsule: Go module artifacts exceed total size limit",
+				)
+			}
+
 			data, err := io.ReadAll(
-				io.LimitReader(tr, MaxGoModuleTotalSizeV3+1),
+				io.LimitReader(tr, remaining+1),
 			)
 			if err != nil {
-				return VerifiedCapsuleV3{}, err
+				return VerifiedCapsuleV3{}, fmt.Errorf(
+					"capsule: read artifact data %q: %w",
+					name, err,
+				)
 			}
 
 			if int64(len(data)) != metadata.Size ||
@@ -240,19 +236,27 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 				)
 			}
 
-			result.Artifacts[name] = data
-		}
+			if _, exists := result.Artifacts[name]; exists {
+				return VerifiedCapsuleV3{}, fmt.Errorf(
+					"capsule: duplicate Go artifact %q",
+					name,
+				)
+			}
 
-		if err := VerifyGoModuleArtifactsV3(
-			result.Manifest.GoModules[0],
-			result.Artifacts,
-			goSum,
-		); err != nil {
-			return VerifiedCapsuleV3{}, fmt.Errorf(
-				"capsule: verify v3 Go module: %w",
-				err,
-			)
+			result.Artifacts[name] = data
+			totalArtifactSize += int64(len(data))
 		}
+	}
+
+	if err := VerifyGoModuleArtifactSetV3(
+		result.Manifest.GoModules,
+		result.Artifacts,
+		goSum,
+	); err != nil {
+		return VerifiedCapsuleV3{}, fmt.Errorf(
+			"capsule: verify v3 Go module set: %w",
+			err,
+		)
 	}
 
 	// Reject unexpected dependency entries, including when there

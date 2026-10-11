@@ -20,6 +20,22 @@ func runOfflineGoCommands(
 	argv []string,
 	stdout, stderr io.Writer,
 ) (int, error) {
+	return runOfflineGoCommandsWithGraph(
+		ctx, dockerClient, containerID, user,
+		argv, nil, false, stdout, stderr,
+	)
+}
+
+func runOfflineGoCommandsWithGraph(
+	ctx context.Context,
+	dockerClient *client.Client,
+	containerID string,
+	user string,
+	argv []string,
+	expected []ExpectedGoModule,
+	verifyGraph bool,
+	stdout, stderr io.Writer,
+) (int, error) {
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("docker SDK: empty offline argv")
 	}
@@ -76,6 +92,17 @@ func runOfflineGoCommands(
 			"docker SDK: offline module preparation canceled: %w",
 			err,
 		)
+	}
+
+	if verifyGraph {
+		if err := verifyOfflineGoModuleGraph(
+			ctx, dockerClient, containerID, user, expected,
+		); err != nil {
+			return 0, fmt.Errorf(
+				"docker SDK: offline module graph verification failed: %w",
+				err,
+			)
+		}
 	}
 
 	code, out, errOut, err := executeInContainer(

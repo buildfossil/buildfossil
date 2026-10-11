@@ -27,6 +27,41 @@ func RunWithSDKRuntimeSnapshotExec(
 	stdout, stderr io.Writer,
 	runtime *RuntimeSpec,
 ) (exitCode int, runErr error) {
+	return runWithSDKRuntimeSnapshotExec(
+		ctx, workspaceTAR, moduleTAR, argv,
+		nil, false, user, stdout, stderr, runtime,
+	)
+}
+
+// RunWithSDKRuntimeSnapshotExecVerified requires an exact offline
+// Go module graph match before executing the captured command.
+func RunWithSDKRuntimeSnapshotExecVerified(
+	ctx context.Context,
+	workspaceTAR []byte,
+	moduleTAR []byte,
+	argv []string,
+	expected []ExpectedGoModule,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+) (int, error) {
+	return runWithSDKRuntimeSnapshotExec(
+		ctx, workspaceTAR, moduleTAR, argv,
+		expected, true, user, stdout, stderr, runtime,
+	)
+}
+
+func runWithSDKRuntimeSnapshotExec(
+	ctx context.Context,
+	workspaceTAR []byte,
+	moduleTAR []byte,
+	argv []string,
+	expected []ExpectedGoModule,
+	verifyGraph bool,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+) (exitCode int, runErr error) {
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("docker SDK: empty command")
 	}
@@ -177,12 +212,14 @@ func RunWithSDKRuntimeSnapshotExec(
 		)
 	}
 
-	code, err := runOfflineGoCommands(
+	code, err := runOfflineGoCommandsWithGraph(
 		execCtx,
 		dockerClient,
 		created.ID,
 		user,
 		argv,
+		expected,
+		verifyGraph,
 		stdout,
 		stderr,
 	)

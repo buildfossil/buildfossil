@@ -41,12 +41,12 @@ func TestGoModulesV3ZeroDependencyContract(t *testing.T) {
 
 	t.Run("multiple modules rejected", func(t *testing.T) {
 		modules := []GoModuleV3{
-			{Path: "example.com/a", Version: "v1.0.0"},
-			{Path: "example.com/b", Version: "v1.0.0"},
+			multiModuleFixture(1, "example.com/a"),
+			multiModuleFixture(2, "example.com/b"),
 		}
 
-		if err := ValidateGoModulesV3(modules); err == nil {
-			t.Fatal("expected multiple modules to be rejected")
+		if err := ValidateGoModulesV3(modules); err != nil {
+			t.Fatalf("two valid Go modules rejected: %v", err)
 		}
 	})
 }

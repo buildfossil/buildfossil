@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	MaxGoModulesV3                  = 1
+	MaxGoModulesV3                  = 8
 	MaxGoModuleArtifactsV3          = 3
-	MaxGoModuleTotalSizeV3    int64 = 1 << 20
+	MaxGoModuleTotalSizeV3    int64 = 16 << 20
 	MaxGoModuleUnpackedSizeV3 int64 = 16 << 20
 )
 
@@ -32,25 +32,33 @@ func ValidateGoModulesV3(modules []GoModuleV3) error {
 		return fmt.Errorf("capsule: too many Go modules")
 	}
 
-	if len(modules) == 0 {
-		return nil
-	}
-
 	var totalSize int64
+	var previousPath string
 
-	for _, mod := range modules {
+	for i, mod := range modules {
 		if err := module.Check(mod.Path, mod.Version); err != nil {
 			return fmt.Errorf("capsule: invalid Go module identity: %w", err)
 		}
 
+		if i > 0 && mod.Path <= previousPath {
+			return fmt.Errorf(
+				"capsule: Go modules must have unique, sorted paths",
+			)
+		}
+		previousPath = mod.Path
+
 		if len(mod.Artifacts) != MaxGoModuleArtifactsV3 {
-			return fmt.Errorf("capsule: Go module requires exactly three artifacts")
+			return fmt.Errorf(
+				"capsule: Go module requires exactly three artifacts",
+			)
 		}
 
+		prefix := fmt.Sprintf("module-%04d", i+1)
+
 		expected := map[string]bool{
-			"module-0001.zip":  false,
-			"module-0001.mod":  false,
-			"module-0001.info": false,
+			prefix + ".zip":  false,
+			prefix + ".mod":  false,
+			prefix + ".info": false,
 		}
 
 		for _, artifact := range mod.Artifacts {
@@ -78,12 +86,16 @@ func ValidateGoModulesV3(modules []GoModuleV3) error {
 			}
 
 			if !strings.HasPrefix(artifact.SHA256, "sha256:") {
-				return fmt.Errorf("capsule: invalid Go artifact digest prefix")
+				return fmt.Errorf(
+					"capsule: invalid Go artifact digest prefix",
+				)
 			}
 
 			digest := strings.TrimPrefix(artifact.SHA256, "sha256:")
 			if len(digest) != 64 {
-				return fmt.Errorf("capsule: invalid Go artifact SHA-256 length")
+				return fmt.Errorf(
+					"capsule: invalid Go artifact SHA-256 length",
+				)
 			}
 
 			if _, err := hex.DecodeString(digest); err != nil {

@@ -49,10 +49,9 @@ func TestValidateGoModuleConsistencyV3(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "indirect dependency",
+			name:    "indirect dependency accepted",
 			goMod:   "module example.com/project\n\ngo 1.26.6\nrequire example.com/fixture v1.0.0 // indirect\n",
 			modules: one,
-			wantErr: true,
 		},
 		{
 			name:    "unsupported replace",

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -50,6 +51,16 @@ func captureCommandV3(
 		return 125
 	}
 
+	beforeFiles, err := capsule.ReadWorkspaceFilesV2(
+		workspaceRoot,
+		includes,
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: read workspace before execution: %v\n", err)
+		return 125
+	}
+
 	result, err := execution.RunInDir(
 		argv,
 		workspaceRoot,
@@ -72,15 +83,15 @@ func captureCommandV3(
 		return 125
 	}
 
-	files, err := capsule.ReadWorkspaceFilesV2(
-		workspaceRoot,
-		includes,
-	)
-	if err != nil {
+	if err := verifyCapturedWorkspaceV3(
+		workspaceRoot, includes, beforeFiles,
+	); err != nil {
 		fmt.Fprintf(os.Stderr,
-			"buildfossil: read workspace: %v\n", err)
+			"buildfossil: workspace changed after execution: %v\n", err)
 		return 125
 	}
+
+	files := beforeFiles
 
 	var goMod []byte
 	var goSum []byte
@@ -121,15 +132,62 @@ func captureCommandV3(
 		return 125
 	}
 
+	selectedModules, err := capsule.ListGoModuleGraphV3(
+		workspaceRoot,
+		moduleCacheRoot,
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: resolve offline Go module graph: %v\n", err)
+		return 125
+	}
+
+	// The graph must describe the same go.mod/go.sum bytes that
+	// will be embedded in the capsule.
+	for _, original := range []struct {
+		name string
+		data []byte
+	}{
+		{"go.mod", goMod},
+		{"go.sum", goSum},
+	} {
+		current, err := os.ReadFile(
+			filepath.Join(workspaceRoot, original.name),
+		)
+		if err != nil || !bytes.Equal(current, original.data) {
+			fmt.Fprintf(os.Stderr,
+				"buildfossil: %s changed during module graph resolution\n",
+				original.name,
+			)
+			return 125
+		}
+	}
+
 	goModules, artifacts, err :=
-		capsule.ReadGoDependenciesForCaptureV3(
-			goMod,
+		capsule.ReadGoModuleArtifactSetForCaptureV3(
+			selectedModules,
 			goSum,
 			moduleCacheRoot,
 		)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
-			"buildfossil: capture Go dependency: %v\n", err)
+			"buildfossil: capture Go module artifacts: %v\n", err)
+		return 125
+	}
+
+	if err := capsule.ValidateGoModuleConsistencyV3(
+		goMod, goModules,
+	); err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: inconsistent Go module graph: %v\n", err)
+		return 125
+	}
+
+	if err := verifyCapturedWorkspaceV3(
+		workspaceRoot, includes, files,
+	); err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: workspace changed before packaging: %v\n", err)
 		return 125
 	}
 

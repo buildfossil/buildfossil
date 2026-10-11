@@ -15,7 +15,7 @@ var goArtifactNamesV3 = []string{
 }
 
 // WriteWorkspaceV3 writes a schema-v3 capsule containing a workspace
-// and exactly one verified Go module.
+// and up to eight verified Go modules.
 //
 // It validates all inputs before writing any bytes to w.
 func WriteWorkspaceV3(
@@ -29,7 +29,7 @@ func WriteWorkspaceV3(
 	}
 
 	if len(manifest.GoModules) > MaxGoModulesV3 {
-		return fmt.Errorf("capsule: v3 writer supports at most one Go module")
+		return fmt.Errorf("capsule: too many Go modules")
 	}
 
 	if len(manifest.GoModules) == 0 && len(artifacts) != 0 {
@@ -104,14 +104,12 @@ func WriteWorkspaceV3(
 		return fmt.Errorf("capsule: invalid v3 manifest: %w", err)
 	}
 
-	if len(manifest.GoModules) == 1 {
-		if err := VerifyGoModuleArtifactsV3(
-			manifest.GoModules[0],
-			artifacts,
-			goSum,
-		); err != nil {
-			return fmt.Errorf("capsule: verify Go module: %w", err)
-		}
+	if err := VerifyGoModuleArtifactSetV3(
+		manifest.GoModules,
+		artifacts,
+		goSum,
+	); err != nil {
+		return fmt.Errorf("capsule: verify Go module set: %w", err)
 	}
 
 	manifestData, err := json.Marshal(manifest)
@@ -160,8 +158,9 @@ func WriteWorkspaceV3(
 		}
 	}
 
-	if len(manifest.GoModules) == 1 {
-		for _, name := range goArtifactNamesV3 {
+	for _, mod := range manifest.GoModules {
+		for _, metadata := range mod.Artifacts {
+			name := metadata.Path
 			data, ok := artifacts[name]
 			if !ok {
 				return fmt.Errorf("capsule: missing Go artifact %q", name)

@@ -16,51 +16,82 @@ import (
 	modzip "golang.org/x/mod/zip"
 )
 
-// VerifyGoModuleArtifactsV3 verifies one module's artifacts against
-// its manifest metadata and the captured workspace go.sum.
-//
-// Artifacts are keyed by their fixed manifest names:
-// module-0001.zip, module-0001.mod, module-0001.info.
+// VerifyGoModuleArtifactsV3 preserves the single-module API.
 func VerifyGoModuleArtifactsV3(
 	mod GoModuleV3,
 	artifacts map[string][]byte,
 	goSum []byte,
 ) error {
-	if err := ValidateGoModulesV3([]GoModuleV3{mod}); err != nil {
-		return err
+	return verifyGoModuleArtifactsAtIndexV3(
+		mod, artifacts, goSum, 1,
+	)
+}
+
+func verifyGoModuleArtifactsAtIndexV3(
+	mod GoModuleV3,
+	artifacts map[string][]byte,
+	goSum []byte,
+	index int,
+) error {
+	if index < 1 || index > MaxGoModulesV3 {
+		return fmt.Errorf("capsule: invalid Go module index")
 	}
 
-	if len(artifacts) != MaxGoModuleArtifactsV3 {
-		return fmt.Errorf("capsule: unexpected Go artifact count")
+	if err := module.Check(mod.Path, mod.Version); err != nil {
+		return fmt.Errorf("capsule: invalid Go module identity: %w", err)
 	}
+
+	prefix := fmt.Sprintf("module-%04d", index)
+
+	if len(mod.Artifacts) != MaxGoModuleArtifactsV3 ||
+		len(artifacts) != MaxGoModuleArtifactsV3 {
+		return fmt.Errorf("capsule: invalid Go artifact count")
+	}
+
+	expected := map[string]bool{
+		prefix + ".zip":  false,
+		prefix + ".mod":  false,
+		prefix + ".info": false,
+	}
+
+	var totalSize int64
 
 	for _, metadata := range mod.Artifacts {
+		seen, ok := expected[metadata.Path]
+		if !ok || seen {
+			return fmt.Errorf("capsule: invalid Go artifact path %q", metadata.Path)
+		}
+		expected[metadata.Path] = true
+
+		if metadata.Size < 0 ||
+			metadata.Size > MaxGoModuleTotalSizeV3-totalSize {
+			return fmt.Errorf("capsule: Go artifact size limit exceeded")
+		}
+		totalSize += metadata.Size
+
 		data, ok := artifacts[metadata.Path]
 		if !ok {
-			return fmt.Errorf(
-				"capsule: missing Go artifact %q",
-				metadata.Path,
-			)
+			return fmt.Errorf("capsule: missing Go artifact %q", metadata.Path)
 		}
 
 		if int64(len(data)) != metadata.Size {
-			return fmt.Errorf(
-				"capsule: Go artifact size mismatch: %q",
-				metadata.Path,
-			)
+			return fmt.Errorf("capsule: Go artifact size mismatch %q", metadata.Path)
 		}
 
 		if SHA256(data) != metadata.SHA256 {
-			return fmt.Errorf(
-				"capsule: Go artifact SHA-256 mismatch: %q",
-				metadata.Path,
-			)
+			return fmt.Errorf("capsule: Go artifact SHA-256 mismatch %q", metadata.Path)
 		}
 	}
 
-	modData := artifacts["module-0001.mod"]
-	infoData := artifacts["module-0001.info"]
-	zipData := artifacts["module-0001.zip"]
+	for name := range artifacts {
+		if _, ok := expected[name]; !ok {
+			return fmt.Errorf("capsule: unexpected Go artifact %q", name)
+		}
+	}
+
+	modData := artifacts[prefix+".mod"]
+	infoData := artifacts[prefix+".info"]
+	zipData := artifacts[prefix+".zip"]
 
 	parsed, err := modfile.Parse("go.mod", modData, nil)
 	if err != nil {

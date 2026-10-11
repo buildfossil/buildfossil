@@ -12,13 +12,12 @@ sandbox for arbitrary hostile workloads.
 
 ## Scope
 
-Schema-v3 replay currently supports a constrained Go build scenario
-with zero or one direct external module dependency.
+Schema-v3 replay supports the exact `go build ./...` command with
+zero to eight selected external Go modules, including transitive dependencies.
 
-For dependency-free builds, the manifest declares no Go modules,
-the capsule contains no dependency artifacts, and replay constructs
-an empty module-cache TAR. For builds with one external module,
-the existing ZIP, MOD, INFO, and go.sum integrity checks remain required.
+For dependency-free builds, the manifest declares no external Go modules
+and replay constructs an empty module-cache TAR. For each selected module,
+ZIP, MOD, INFO, and go.sum integrity checks are required.
 
 This document describes the path from a verified `.bfc` capsule to
 execution in a restricted Docker container.
@@ -38,9 +37,12 @@ The current schema-v3 replay implementation:
 8. Creates a restricted execution container with both volumes mounted
    read-only.
 9. Copies the module cache into a writable container tmpfs.
-10. Runs offline Go module preparation and executes the captured command.
-11. Compares the replay exit code and stderr with the captured failure.
-12. Removes the execution container and Docker volumes.
+10. Runs offline Go module preparation.
+11. Resolves the module graph inside the execution container and requires
+    an exact match with the verified manifest.
+12. Executes the captured command only when graph verification succeeds.
+13. Compares the replay exit code and stderr with the captured failure.
+14. Removes the execution container and Docker volumes.
 
 The active schema-v3 replay path does not restore the workspace into
 host staging directories or use host bind mounts for replay inputs.
@@ -163,7 +165,7 @@ The current experimental implementation is not intended for:
 
 - Arbitrary hostile code execution.
 - Untrusted third-party capsule execution.
-- General-purpose dependency graph replay.
+- Arbitrarily large or unrestricted dependency graph replay.
 - Multi-platform container execution.
 - Strong isolation from the Docker daemon or host kernel.
 
