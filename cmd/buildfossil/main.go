@@ -17,6 +17,21 @@ func run(args []string) int {
 	}
 
 	switch args[0] {
+	case "--help", "-h", "help":
+		if len(args) != 1 {
+			fmt.Fprintln(os.Stderr, "Usage: buildfossil help")
+			return 2
+		}
+		printGeneralHelp()
+		return 0
+
+	case "--version":
+		if len(args) != 1 {
+			fmt.Fprintln(os.Stderr, "Usage: buildfossil --version")
+			return 2
+		}
+		fmt.Println("buildfossil dev")
+		return 0
 	case "capture-demo":
 		return runCaptureDemo(args[1:])
 
@@ -29,6 +44,10 @@ func run(args []string) int {
 		return 0
 
 	case "capture":
+		if len(args) == 2 && (args[1] == "--help" || args[1] == "-h") {
+			printCaptureHelp()
+			return 0
+		}
 
 		if len(args) >= 2 && args[1] == "--v3" {
 			var includes []string
@@ -98,6 +117,10 @@ func run(args []string) int {
 		)
 
 	case "replay":
+		if len(args) == 2 && (args[1] == "--help" || args[1] == "-h") {
+			printReplayHelp()
+			return 0
+		}
 		return runReplay(args[1:])
 
 	default:
