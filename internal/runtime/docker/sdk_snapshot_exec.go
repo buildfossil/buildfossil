@@ -311,8 +311,8 @@ func newSnapshotExecutionOptions(
 	}
 
 	options.HostConfig.Tmpfs = map[string]string{
-		"/tmp":        "rw,nosuid,nodev,size=64m,mode=1777",
-		"/gocache":    "rw,nosuid,nodev,size=64m,mode=1777",
+		"/tmp":        "rw,nosuid,nodev,size=512m,mode=1777",
+		"/gocache":    "rw,nosuid,nodev,size=256m,mode=1777",
 		"/gomodcache": "rw,nosuid,nodev,size=64m,mode=1777",
 	}
 

@@ -11,6 +11,8 @@ import (
 
 	"github.com/buildfossil/buildfossil/internal/capsule"
 	"github.com/buildfossil/buildfossil/internal/execution"
+	"golang.org/x/mod/modfile"
+	"golang.org/x/mod/module"
 )
 
 func captureCommandV3(
@@ -234,6 +236,48 @@ func captureCommandV3(
 		return 125
 	}
 
+	parsedGoMod, err := modfile.Parse("go.mod", goMod, nil)
+	if err != nil || parsedGoMod.Module == nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: invalid main go.mod: %v\n", err)
+		return 125
+	}
+
+	mainModulePath := parsedGoMod.Module.Mod.Path
+	if err := module.CheckPath(mainModulePath); err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: invalid main module path: %v\n", err)
+		return 125
+	}
+
+	graphIdentities, err := capsule.ListGoGraphModRequirementsV3(
+		workspaceRoot,
+		moduleCacheRoot,
+		mainModulePath,
+		selectedModules,
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: discover Go graph metadata: %v\n", err)
+		return 125
+	}
+
+	graphFiles, graphArtifacts, err :=
+		capsule.ReadGoGraphModFilesForCaptureV3(
+			graphIdentities,
+			goSum,
+			moduleCacheRoot,
+		)
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: capture Go graph metadata: %v\n", err)
+		return 125
+	}
+
+	for name, data := range graphArtifacts {
+		artifacts[name] = data
+	}
+
 	if err := capsule.ValidateGoModuleConsistencyV3(
 		goMod, goModules,
 	); err != nil {
@@ -251,10 +295,11 @@ func captureCommandV3(
 	}
 
 	manifest := capsule.Manifest{
-		SchemaVersion: capsule.SchemaVersionV3,
-		Runtime:       detectedRuntime,
-		GoBuildEnv:    &goBuildEnv,
-		GoModules:     goModules,
+		SchemaVersion:   capsule.SchemaVersionV3,
+		Runtime:         detectedRuntime,
+		GoBuildEnv:      &goBuildEnv,
+		GoModules:       goModules,
+		GoGraphModFiles: graphFiles,
 		Execution: capsule.Execution{
 			Argv:            result.Argv,
 			WorkingDir:      ".",
