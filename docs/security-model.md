@@ -93,6 +93,15 @@ The execution container uses:
 - CPU, memory, and PID limits.
 - Writable tmpfs mounts for temporary files and Go caches.
 
+Schema-v3 replay uses 256 MiB of execution-container memory by default.
+An explicit --memory option permits 256 MiB, 512 MiB, 1 GiB, or 2 GiB.
+
+This setting does not change network isolation, non-root execution,
+read-only filesystems, dropped capabilities, CPU or PID limits,
+or snapshot volume mount restrictions.
+
+Additional memory does not make untrusted capsule execution safe.
+
 Both execution volume mounts use Docker's `NoCopy` option.
 
 The preparation containers have different access requirements

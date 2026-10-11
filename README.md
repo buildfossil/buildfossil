@@ -188,6 +188,21 @@ Run:
 /path/to/buildfossil replay --v3 --allow-command failure.bfc
 ```
 
+Schema-v3 replay uses 256 MiB of container memory by default.
+
+For memory-intensive builds or AMD64 emulation on ARM64, use:
+
+    /path/to/buildfossil replay --v3 --allow-command --memory 1g failure.bfc
+
+Supported values: 256m, 512m, 1g, 2g. Maximum: 2 GiB.
+This option applies only to schema-v3 replay.
+
+Changing memory limits can change the replay outcome.
+Other Docker security restrictions remain unchanged.
+
+For rootless Docker, set DOCKER_HOST to the rootless Docker socket
+if automatic connection fails.
+
 A successfully reproduced failure reports output similar to:
 
 ```text

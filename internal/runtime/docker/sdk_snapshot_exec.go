@@ -29,7 +29,7 @@ func RunWithSDKRuntimeSnapshotExec(
 ) (exitCode int, runErr error) {
 	return runWithSDKRuntimeSnapshotExec(
 		ctx, workspaceTAR, moduleTAR, argv,
-		nil, false, user, stdout, stderr, runtime,
+		nil, false, 0, user, stdout, stderr, runtime,
 	)
 }
 
@@ -45,9 +45,28 @@ func RunWithSDKRuntimeSnapshotExecVerified(
 	stdout, stderr io.Writer,
 	runtime *RuntimeSpec,
 ) (int, error) {
+	return RunWithSDKRuntimeSnapshotExecVerifiedWithMemory(
+		ctx, workspaceTAR, moduleTAR, argv,
+		expected, 0, user, stdout, stderr, runtime,
+	)
+}
+
+// RunWithSDKRuntimeSnapshotExecVerifiedWithMemory runs schema-v3
+// replay with an explicitly bounded execution-container memory limit.
+func RunWithSDKRuntimeSnapshotExecVerifiedWithMemory(
+	ctx context.Context,
+	workspaceTAR []byte,
+	moduleTAR []byte,
+	argv []string,
+	expected []ExpectedGoModule,
+	memoryBytes int64,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+) (int, error) {
 	return runWithSDKRuntimeSnapshotExec(
 		ctx, workspaceTAR, moduleTAR, argv,
-		expected, true, user, stdout, stderr, runtime,
+		expected, true, memoryBytes, user, stdout, stderr, runtime,
 	)
 }
 
@@ -58,12 +77,17 @@ func runWithSDKRuntimeSnapshotExec(
 	argv []string,
 	expected []ExpectedGoModule,
 	verifyGraph bool,
+	memoryBytes int64,
 	user string,
 	stdout, stderr io.Writer,
 	runtime *RuntimeSpec,
 ) (exitCode int, runErr error) {
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("docker SDK: empty command")
+	}
+
+	if err := validateReplayMemoryV3(memoryBytes); err != nil {
+		return 0, err
 	}
 
 	if runtime == nil ||
@@ -162,6 +186,9 @@ func runWithSDKRuntimeSnapshotExec(
 		user,
 		volumes,
 	)
+	if err := applyReplayMemoryV3(&options, memoryBytes); err != nil {
+		return 0, err
+	}
 	created, err := dockerClient.ContainerCreate(
 		execCtx,
 		options,

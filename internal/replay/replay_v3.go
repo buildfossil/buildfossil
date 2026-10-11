@@ -22,6 +22,17 @@ func RunV3WithOptions(
 ) (Result, error) {
 	var result Result
 
+	if options.MemoryBytes != 0 {
+		switch options.MemoryBytes {
+		case 256 << 20, 512 << 20, 1 << 30, 2 << 30:
+		default:
+			return result, fmt.Errorf(
+				"replay: invalid v3 memory limit: %d bytes",
+				options.MemoryBytes,
+			)
+		}
+	}
+
 	verified, err := capsule.ReadVerifiedV3(capsulePath)
 	if err != nil {
 		return result, fmt.Errorf("replay: verify v3 capsule: %w", err)
@@ -86,12 +97,13 @@ func RunV3WithOptions(
 
 	var stderr boundedOutput
 
-	code, err := docker.RunWithSDKRuntimeSnapshotExecVerified(
+	code, err := docker.RunWithSDKRuntimeSnapshotExecVerifiedWithMemory(
 		ctx,
 		workspaceTAR,
 		moduleTAR,
 		verified.Manifest.Execution.Argv,
 		expectedModules,
+		options.MemoryBytes,
 		containerUser,
 		io.Discard,
 		&stderr,

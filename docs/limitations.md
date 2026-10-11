@@ -148,6 +148,13 @@ The current implementation does not reproduce every property of the original CI 
 
 Replay requires a working Docker environment capable of executing Linux AMD64 containers.
 
+Schema-v3 replay defaults to 256 MiB of container memory.
+The --memory option accepts 256m, 512m, 1g, or 2g.
+
+AMD64 emulation on ARM64 may require additional memory.
+An out-of-memory failure can produce a different_failure outcome.
+Increasing the limit may change the result, but does not guarantee reproduction.
+
 The Docker image is pinned for reproducibility.
 
 The replay container has network access disabled. However, the host may require network access to fetch the replay image.
