@@ -70,6 +70,35 @@ func RunWithSDKRuntimeSnapshotExecVerifiedWithMemory(
 	)
 }
 
+// RunWithSDKRuntimeSnapshotExecSelectiveV3 materializes only
+// modules with complete ZIP artifacts, while verifying the full
+// selected Go module graph before executing the captured command.
+func RunWithSDKRuntimeSnapshotExecSelectiveV3(
+	ctx context.Context,
+	workspaceTAR []byte,
+	moduleTAR []byte,
+	argv []string,
+	expected []ExpectedGoModule,
+	materialized []ExpectedGoModule,
+	memoryBytes int64,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+) (int, error) {
+	downloadArgs, err := selectiveGoModuleDownloadArgsV3(
+		expected, materialized,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return runWithSDKRuntimeSnapshotExecSelective(
+		ctx, workspaceTAR, moduleTAR, argv,
+		expected, true, memoryBytes, user,
+		stdout, stderr, runtime, downloadArgs, true,
+	)
+}
+
 func runWithSDKRuntimeSnapshotExec(
 	ctx context.Context,
 	workspaceTAR []byte,
@@ -81,6 +110,27 @@ func runWithSDKRuntimeSnapshotExec(
 	user string,
 	stdout, stderr io.Writer,
 	runtime *RuntimeSpec,
+) (exitCode int, runErr error) {
+	return runWithSDKRuntimeSnapshotExecSelective(
+		ctx, workspaceTAR, moduleTAR, argv,
+		expected, verifyGraph, memoryBytes, user,
+		stdout, stderr, runtime, nil, false,
+	)
+}
+
+func runWithSDKRuntimeSnapshotExecSelective(
+	ctx context.Context,
+	workspaceTAR []byte,
+	moduleTAR []byte,
+	argv []string,
+	expected []ExpectedGoModule,
+	verifyGraph bool,
+	memoryBytes int64,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+	downloadArgs []string,
+	selective bool,
 ) (exitCode int, runErr error) {
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("docker SDK: empty command")
@@ -239,17 +289,19 @@ func runWithSDKRuntimeSnapshotExec(
 		)
 	}
 
-	code, err := runOfflineGoCommandsWithGraph(
-		execCtx,
-		dockerClient,
-		created.ID,
-		user,
-		argv,
-		expected,
-		verifyGraph,
-		stdout,
-		stderr,
-	)
+	var code int
+
+	if selective {
+		code, err = runOfflineGoCommandsWithGraphSelective(
+			execCtx, dockerClient, created.ID, user,
+			argv, expected, verifyGraph, downloadArgs, stdout, stderr,
+		)
+	} else {
+		code, err = runOfflineGoCommandsWithGraph(
+			execCtx, dockerClient, created.ID, user,
+			argv, expected, verifyGraph, stdout, stderr,
+		)
+	}
 	if err != nil {
 		return 0, err
 	}

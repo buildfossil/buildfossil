@@ -90,7 +90,7 @@ func ParseGoModuleGraphV3(data []byte) ([]GoModuleIdentityV3, error) {
 			Version: item.Version,
 		})
 
-		if len(modules) > MaxGoModulesV3 {
+		if len(modules) > MaxGoSelectedModulesV3 {
 			return nil, fmt.Errorf("capsule: too many selected Go modules")
 		}
 	}

@@ -224,9 +224,18 @@ func captureCommandV3(
 		}
 	}
 
+	buildModules, err := capsule.ListGoBuildModulesV3(
+		workspaceRoot, moduleCacheRoot, selectedModules,
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: discover build dependencies: %v\n", err)
+		return 125
+	}
+
 	goModules, artifacts, err :=
 		capsule.ReadGoModuleArtifactSetForCaptureV3(
-			selectedModules,
+			buildModules,
 			goSum,
 			moduleCacheRoot,
 		)
@@ -262,11 +271,18 @@ func captureCommandV3(
 		return 125
 	}
 
+	graphModIdentities, err := capsule.SelectVerifiedGoGraphModsV3(
+		selectedModules, goModules, graphIdentities, goSum,
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: select graph metadata: %v\n", err)
+		return 125
+	}
+
 	graphFiles, graphArtifacts, err :=
 		capsule.ReadGoGraphModFilesForCaptureV3(
-			graphIdentities,
-			goSum,
-			moduleCacheRoot,
+			graphModIdentities, goSum, moduleCacheRoot,
 		)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
@@ -278,8 +294,27 @@ func captureCommandV3(
 		artifacts[name] = data
 	}
 
-	if err := capsule.ValidateGoModuleConsistencyV3(
-		goMod, goModules,
+	infoFiles, infoArtifacts, err :=
+		capsule.ReadGoGraphInfoFilesForCaptureV3(
+			selectedModules, goModules, moduleCacheRoot,
+		)
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: capture graph info: %v\n", err)
+		return 125
+	}
+
+	for name, data := range infoArtifacts {
+		artifacts[name] = data
+	}
+
+	selectedManifest := capsule.Manifest{
+		GoModules:         goModules,
+		GoSelectedModules: selectedModules,
+		GoGraphInfoFiles:  infoFiles,
+	}
+	if err := capsule.ValidateGoSelectedModuleConsistencyV3(
+		goMod, selectedManifest,
 	); err != nil {
 		fmt.Fprintf(os.Stderr,
 			"buildfossil: inconsistent Go module graph: %v\n", err)
@@ -295,11 +330,13 @@ func captureCommandV3(
 	}
 
 	manifest := capsule.Manifest{
-		SchemaVersion:   capsule.SchemaVersionV3,
-		Runtime:         detectedRuntime,
-		GoBuildEnv:      &goBuildEnv,
-		GoModules:       goModules,
-		GoGraphModFiles: graphFiles,
+		SchemaVersion:     capsule.SchemaVersionV3,
+		Runtime:           detectedRuntime,
+		GoBuildEnv:        &goBuildEnv,
+		GoModules:         goModules,
+		GoSelectedModules: selectedModules,
+		GoGraphModFiles:   graphFiles,
+		GoGraphInfoFiles:  infoFiles,
 		Execution: capsule.Execution{
 			Argv:            result.Argv,
 			WorkingDir:      ".",

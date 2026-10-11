@@ -19,7 +19,7 @@ func TestDockerModuleGraphSupports16Modules(t *testing.T) {
 		t.Fatalf("16-module graph rejected: %v", err)
 	}
 
-	tooMany := append(
+	seventeen := append(
 		append([]ExpectedGoModule{}, expected...),
 		ExpectedGoModule{
 			Path:    "example.com/mod0016",
@@ -27,8 +27,8 @@ func TestDockerModuleGraphSupports16Modules(t *testing.T) {
 		},
 	)
 
-	if err := compareDockerGoModuleGraph(tooMany, tooMany); err == nil {
-		t.Fatal("17-module graph unexpectedly accepted")
+	if err := compareDockerGoModuleGraph(seventeen, seventeen); err != nil {
+		t.Fatalf("17-module selected graph rejected: %v", err)
 	}
 }
 

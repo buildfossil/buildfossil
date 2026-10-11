@@ -23,13 +23,13 @@ func moduleGraphFixture(count int) []byte {
 }
 
 func TestGoModuleGraphCapacityBoundaries(t *testing.T) {
-	for _, count := range []int{0, 1, 8, 9, 16, 17} {
+	for _, count := range []int{0, 1, 8, 9, 16, 17, 64, 65} {
 		t.Run(fmt.Sprintf("modules_%d", count), func(t *testing.T) {
 			modules, err := ParseGoModuleGraphV3(
 				moduleGraphFixture(count),
 			)
 
-			if count > MaxGoModulesV3 {
+			if count > MaxGoSelectedModulesV3 {
 				if err == nil {
 					t.Fatal("expected module limit rejection")
 				}
@@ -47,7 +47,7 @@ func TestGoModuleGraphCapacityBoundaries(t *testing.T) {
 }
 
 func BenchmarkParseGoModuleGraphV3(b *testing.B) {
-	for _, count := range []int{0, 1, 8, 9, 16, 17} {
+	for _, count := range []int{0, 1, 8, 9, 16, 17, 64, 65} {
 		b.Run(fmt.Sprintf("modules_%d", count), func(b *testing.B) {
 			input := moduleGraphFixture(count)
 			b.ReportAllocs()
@@ -56,7 +56,7 @@ func BenchmarkParseGoModuleGraphV3(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				_, err := ParseGoModuleGraphV3(input)
 
-				if count > MaxGoModulesV3 {
+				if count > MaxGoSelectedModulesV3 {
 					if err == nil {
 						b.Fatal("expected module limit rejection")
 					}

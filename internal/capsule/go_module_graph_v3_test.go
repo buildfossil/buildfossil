@@ -59,11 +59,33 @@ func TestParseGoModuleGraphV3RejectsInvalidInput(t *testing.T) {
 	}
 }
 
+func TestParseGoModuleGraphV3SeventeenModules(t *testing.T) {
+	var input strings.Builder
+	input.WriteString(`{"Path":"example.com/root","Main":true}` + "\n")
+
+	for i := 0; i < 17; i++ {
+		fmt.Fprintf(
+			&input,
+			"{\"Path\":\"example.com/mod%02d\",\"Version\":\"v1.0.0\"}\n",
+			i,
+		)
+	}
+
+	modules, err := ParseGoModuleGraphV3([]byte(input.String()))
+	if err != nil {
+		t.Fatalf("17-module graph rejected: %v", err)
+	}
+
+	if len(modules) != 17 {
+		t.Fatalf("module count = %d, want 17", len(modules))
+	}
+}
+
 func TestParseGoModuleGraphV3RejectsTooManyModules(t *testing.T) {
 	var input strings.Builder
 	input.WriteString(`{"Path":"example.com/app","Main":true}` + "\n")
 
-	for i := 0; i < MaxGoModulesV3+1; i++ {
+	for i := 0; i < MaxGoSelectedModulesV3+1; i++ {
 		fmt.Fprintf(
 			&input,
 			"{\"Path\":\"example.com/mod%02d\",\"Version\":\"v1.0.0\"}\n",

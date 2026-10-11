@@ -97,6 +97,10 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 		expectedSize += tarEntrySize(graphFile.Artifact.Size)
 	}
 
+	for _, infoFile := range result.Manifest.GoGraphInfoFiles {
+		expectedSize += tarEntrySize(infoFile.Artifact.Size)
+	}
+
 	if info.Size() != expectedSize {
 		return VerifiedCapsuleV3{}, fmt.Errorf(
 			"capsule: v3 archive size mismatch: expected %d, got %d",
@@ -180,9 +184,9 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 		)
 	}
 
-	if err := ValidateGoModuleConsistencyV3(
+	if err := ValidateGoSelectedModuleConsistencyV3(
 		goMod,
-		result.Manifest.GoModules,
+		result.Manifest,
 	); err != nil {
 		return VerifiedCapsuleV3{}, fmt.Errorf(
 			"capsule: invalid v3 Go dependency declaration: %w",
@@ -325,6 +329,83 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 	); err != nil {
 		return VerifiedCapsuleV3{}, fmt.Errorf(
 			"capsule: verify graph artifacts: %w", err,
+		)
+	}
+
+	// Read metadata-only .info files after graph .mod files.
+	infoArtifacts := make(
+		map[string][]byte,
+		len(result.Manifest.GoGraphInfoFiles),
+	)
+
+	var totalInfoSize int64
+
+	for _, infoFile := range result.Manifest.GoGraphInfoFiles {
+		metadata := infoFile.Artifact
+		name := metadata.Path
+
+		header, err := tr.Next()
+		if err != nil {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: read graph info %q: %w", name, err,
+			)
+		}
+
+		if header.Name != "dependencies/"+name ||
+			header.Typeflag != tar.TypeReg ||
+			header.Size != metadata.Size {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: invalid graph info TAR entry %q", name,
+			)
+		}
+
+		remaining := MaxGoGraphInfoTotalSizeV3 - totalInfoSize
+		if remaining < 0 || metadata.Size > remaining {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: graph info total size exceeded",
+			)
+		}
+
+		data, err := io.ReadAll(
+			io.LimitReader(tr, remaining+1),
+		)
+		if err != nil {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: read graph info data %q: %w", name, err,
+			)
+		}
+
+		if int64(len(data)) != metadata.Size {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: graph info size mismatch %q", name,
+			)
+		}
+
+		if err := VerifyGoGraphInfoFileV3(
+			infoFile, data,
+		); err != nil {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: invalid graph info %q: %w", name, err,
+			)
+		}
+
+		if _, exists := result.Artifacts[name]; exists {
+			return VerifiedCapsuleV3{}, fmt.Errorf(
+				"capsule: duplicate graph info artifact %q", name,
+			)
+		}
+
+		infoArtifacts[name] = data
+		result.Artifacts[name] = data
+		totalInfoSize += int64(len(data))
+	}
+
+	if err := VerifyGoGraphInfoArtifactSetV3(
+		result.Manifest.GoGraphInfoFiles,
+		infoArtifacts,
+	); err != nil {
+		return VerifiedCapsuleV3{}, fmt.Errorf(
+			"capsule: verify graph info artifacts: %w", err,
 		)
 	}
 
