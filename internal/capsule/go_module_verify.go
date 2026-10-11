@@ -232,10 +232,9 @@ func verifyEmbeddedGoMod(
 		}
 	}
 
-	if !found {
-		return fmt.Errorf("capsule: module ZIP missing go.mod")
-	}
-
+	// Legacy Go modules may not contain go.mod inside their ZIP.
+	// The separate .mod artifact and its go.sum checksum are
+	// verified by verifyGoModuleArtifactsAtIndexV3.
 	return nil
 }
 
