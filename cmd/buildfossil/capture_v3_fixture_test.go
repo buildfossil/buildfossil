@@ -29,9 +29,25 @@ func makeCaptureV3Fixture(t *testing.T) captureV3Fixture {
 	const moduleVersion = "v1.0.0"
 
 	cacheRoot := t.TempDir()
+
+	t.Cleanup(func() {
+		_ = filepath.Walk(cacheRoot, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+			if info.IsDir() {
+				_ = os.Chmod(path, 0700)
+			} else if info.Mode().IsRegular() {
+				_ = os.Chmod(path, 0600)
+			}
+			return nil
+		})
+	})
 	workspace := t.TempDir()
 	output := filepath.Join(t.TempDir(), "failure.bfc")
 
+	t.Setenv("CGO_ENABLED", "0")
+	t.Setenv("GOWORK", "off")
 	t.Setenv("GOMODCACHE", cacheRoot)
 	t.Setenv("GOPROXY", "off")
 	t.Setenv("GOSUMDB", "off")
@@ -190,6 +206,9 @@ func main() {
 			t.Fatal(err)
 		}
 	}
+
+	// Restore portable Go build flags after cache preparation.
+	t.Setenv("GOFLAGS", "")
 
 	return captureV3Fixture{
 		workspace: workspace,

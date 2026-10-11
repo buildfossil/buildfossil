@@ -68,7 +68,8 @@ func InspectGoBuildEnvironment(workingDir string) (
 
 // ValidatePortableGoBuild checks the initial portability policy.
 func (e GoBuildEnvironment) ValidatePortableGoBuild() error {
-	if e.GOOS != "darwin" || e.GOARCH != "arm64" {
+	if !((e.GOOS == "darwin" && e.GOARCH == "arm64") ||
+		(e.GOOS == "linux" && e.GOARCH == "amd64")) {
 		return fmt.Errorf(
 			"unsupported portable Go source platform %s/%s",
 			e.GOOS,

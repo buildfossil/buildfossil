@@ -183,6 +183,18 @@ Run the BuildFossil executable built in the previous step, replacing `"$BUILDFOS
   -- go build ./...
 ```
 
+Capture v3 checks the portable Go environment before executing the build.
+Supported source targets are `darwin/arm64` and `linux/amd64`, with
+`CGO_ENABLED=0` and empty `GOFLAGS`.
+
+If the environment is unsupported, Capture exits with code `125`.
+For example, on macOS where CGO is enabled by default, set
+`CGO_ENABLED=0` before capture.
+
+The output file `failure.bfc` is never overwritten. If it already exists,
+move or rename it before repeating Capture. BuildFossil checks this before
+executing the build and retains exclusive file creation protection.
+
 The build is expected to fail because `undefinedFunction` does not exist.
 
 BuildFossil saves `failure.bfc` in the current working directory when the failed build satisfies the supported capture requirements.
