@@ -76,6 +76,12 @@ func RunWithOptions(
 	}
 	defer os.RemoveAll(workspace)
 
+	// Allow the unprivileged Docker user to traverse this temporary
+	// workspace. Files retain their independently controlled permissions.
+	if err := prepareLegacyReplayWorkspace(workspace); err != nil {
+		return result, fmt.Errorf("replay: prepare workspace permissions: %w", err)
+	}
+
 	if err := capsule.RestoreWorkspace(workspace, verified); err != nil {
 		return result, fmt.Errorf("replay: restore workspace: %w", err)
 	}
