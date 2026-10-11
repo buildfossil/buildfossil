@@ -3,7 +3,6 @@ package replay
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -53,13 +52,6 @@ func TestReplayIntegration(t *testing.T) {
 		30*time.Second,
 	)
 	defer cancel()
-
-	// Ensure Docker pull progress cannot contaminate the captured
-	// stderr of the replayed command during this integration test.
-	pull := exec.CommandContext(ctx, "docker", "pull", "alpine:3.20")
-	if output, err := pull.CombinedOutput(); err != nil {
-		t.Fatalf("prepare replay image: %v: %s", err, output)
-	}
 
 	result, err := Run(ctx, output)
 	if err != nil {
