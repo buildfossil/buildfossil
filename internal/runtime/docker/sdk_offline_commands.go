@@ -36,6 +36,43 @@ func runOfflineGoCommandsWithGraph(
 	verifyGraph bool,
 	stdout, stderr io.Writer,
 ) (int, error) {
+	return runOfflineGoCommandsCore(
+		ctx, dockerClient, containerID, user,
+		argv, expected, verifyGraph,
+		nil, false, stdout, stderr,
+	)
+}
+
+func runOfflineGoCommandsWithGraphSelective(
+	ctx context.Context,
+	dockerClient *client.Client,
+	containerID string,
+	user string,
+	argv []string,
+	expected []ExpectedGoModule,
+	verifyGraph bool,
+	downloadArgs []string,
+	stdout, stderr io.Writer,
+) (int, error) {
+	return runOfflineGoCommandsCore(
+		ctx, dockerClient, containerID, user,
+		argv, expected, verifyGraph,
+		downloadArgs, true, stdout, stderr,
+	)
+}
+
+func runOfflineGoCommandsCore(
+	ctx context.Context,
+	dockerClient *client.Client,
+	containerID string,
+	user string,
+	argv []string,
+	expected []ExpectedGoModule,
+	verifyGraph bool,
+	downloadArgs []string,
+	selective bool,
+	stdout, stderr io.Writer,
+) (int, error) {
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("docker SDK: empty offline argv")
 	}
@@ -65,26 +102,32 @@ func runOfflineGoCommandsWithGraph(
 		)
 	}
 
-	moduleCode, _, moduleStderr, err := executeInContainer(
-		ctx,
-		dockerClient,
-		containerID,
-		user,
-		[]string{"go", "mod", "download"},
-	)
-	if err != nil {
-		return 0, fmt.Errorf(
-			"docker SDK: offline module materialization: %w",
-			err,
-		)
+	if !selective {
+		downloadArgs = []string{"go", "mod", "download"}
 	}
 
-	if moduleCode != 0 {
-		return 0, fmt.Errorf(
-			"docker SDK: offline module materialization failed (exit %d): %s",
-			moduleCode,
-			string(moduleStderr),
+	if len(downloadArgs) > 0 {
+		moduleCode, _, moduleStderr, err := executeInContainer(
+			ctx,
+			dockerClient,
+			containerID,
+			user,
+			downloadArgs,
 		)
+		if err != nil {
+			return 0, fmt.Errorf(
+				"docker SDK: offline module materialization: %w",
+				err,
+			)
+		}
+
+		if moduleCode != 0 {
+			return 0, fmt.Errorf(
+				"docker SDK: offline module materialization failed (exit %d): %s",
+				moduleCode,
+				string(moduleStderr),
+			)
+		}
 	}
 
 	if err := ctx.Err(); err != nil {

@@ -12,7 +12,7 @@ import (
 )
 
 // RunV3WithOptions replays a verified schema-v3 capsule with
-// up to sixteen embedded Go modules, without network access.
+// up to 64 selected Go modules, with at most 16 complete module ZIPs, without network access.
 //
 // Experimental: uses Docker Exec, which is not equivalent to PID 1.
 func RunV3WithOptions(
@@ -83,26 +83,46 @@ func RunV3WithOptions(
 		)
 	}
 
+	selectedModules := capsule.EffectiveGoSelectedModulesV3(
+		verified.Manifest,
+	)
+
 	expectedModules := make(
 		[]docker.ExpectedGoModule,
 		0,
-		len(verified.Manifest.GoModules),
+		len(selectedModules),
 	)
-	for _, mod := range verified.Manifest.GoModules {
+	for _, mod := range selectedModules {
 		expectedModules = append(expectedModules, docker.ExpectedGoModule{
 			Path:    mod.Path,
 			Version: mod.Version,
 		})
 	}
 
+	materializedModules := make(
+		[]docker.ExpectedGoModule,
+		0,
+		len(verified.Manifest.GoModules),
+	)
+	for _, mod := range verified.Manifest.GoModules {
+		materializedModules = append(
+			materializedModules,
+			docker.ExpectedGoModule{
+				Path:    mod.Path,
+				Version: mod.Version,
+			},
+		)
+	}
+
 	var stderr boundedOutput
 
-	code, err := docker.RunWithSDKRuntimeSnapshotExecVerifiedWithMemory(
+	code, err := docker.RunWithSDKRuntimeSnapshotExecSelectiveV3(
 		ctx,
 		workspaceTAR,
 		moduleTAR,
 		verified.Manifest.Execution.Argv,
 		expectedModules,
+		materializedModules,
 		options.MemoryBytes,
 		containerUser,
 		io.Discard,

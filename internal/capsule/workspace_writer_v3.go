@@ -32,7 +32,10 @@ func WriteWorkspaceV3(
 		return fmt.Errorf("capsule: too many Go modules")
 	}
 
-	if len(manifest.GoModules) == 0 && len(artifacts) != 0 {
+	if len(manifest.GoModules) == 0 &&
+		len(manifest.GoGraphModFiles) == 0 &&
+		len(manifest.GoGraphInfoFiles) == 0 &&
+		len(artifacts) != 0 {
 		return fmt.Errorf(
 			"capsule: zero-dependency capsule must not contain Go artifacts",
 		)
@@ -91,9 +94,9 @@ func WriteWorkspaceV3(
 		return fmt.Errorf("capsule: v3 requires workspace/go.mod")
 	}
 
-	if err := ValidateGoModuleConsistencyV3(
+	if err := ValidateGoSelectedModuleConsistencyV3(
 		goMod,
-		manifest.GoModules,
+		manifest,
 	); err != nil {
 		return fmt.Errorf("capsule: invalid Go dependency declaration: %w", err)
 	}
@@ -104,11 +107,8 @@ func WriteWorkspaceV3(
 		return fmt.Errorf("capsule: invalid v3 manifest: %w", err)
 	}
 
-	selectedArtifacts, graphArtifacts, err := SplitGoArtifactsV3(
-		manifest.GoModules,
-		manifest.GoGraphModFiles,
-		artifacts,
-	)
+	selectedArtifacts, graphArtifacts, infoArtifacts, err :=
+		SplitExtendedGoArtifactsV3(manifest, artifacts)
 	if err != nil {
 		return fmt.Errorf("capsule: split Go artifacts: %w", err)
 	}
@@ -127,6 +127,13 @@ func WriteWorkspaceV3(
 		goSum,
 	); err != nil {
 		return fmt.Errorf("capsule: verify Go graph metadata: %w", err)
+	}
+
+	if err := VerifyGoGraphInfoArtifactSetV3(
+		manifest.GoGraphInfoFiles,
+		infoArtifacts,
+	); err != nil {
+		return fmt.Errorf("capsule: verify Go graph info: %w", err)
 	}
 
 	manifestData, err := json.Marshal(manifest)
@@ -208,6 +215,22 @@ func WriteWorkspaceV3(
 		); err != nil {
 			return fmt.Errorf(
 				"capsule: write Go graph artifact %q: %w",
+				name, err,
+			)
+		}
+	}
+
+	for _, infoFile := range manifest.GoGraphInfoFiles {
+		name := infoFile.Artifact.Path
+		data := infoArtifacts[name]
+
+		if err := writeEntry(
+			"dependencies/"+name,
+			data,
+			0600,
+		); err != nil {
+			return fmt.Errorf(
+				"capsule: write Go graph info %q: %w",
 				name, err,
 			)
 		}

@@ -18,6 +18,8 @@ type ExpectedGoModule struct {
 	Version string
 }
 
+const maxDockerSelectedGoModulesV3 = 64
+
 type dockerListedGoModule struct {
 	Path    string          `json:"Path"`
 	Version string          `json:"Version"`
@@ -77,7 +79,7 @@ func parseDockerGoModuleGraph(data []byte) ([]ExpectedGoModule, error) {
 			Path: item.Path, Version: item.Version,
 		})
 
-		if len(modules) > 16 {
+		if len(modules) > maxDockerSelectedGoModulesV3 {
 			return nil, fmt.Errorf("docker SDK: module graph exceeds limit")
 		}
 	}
@@ -97,7 +99,7 @@ func compareDockerGoModuleGraph(
 	expected []ExpectedGoModule,
 	actual []ExpectedGoModule,
 ) error {
-	if len(expected) > 16 || len(expected) != len(actual) {
+	if len(expected) > maxDockerSelectedGoModulesV3 || len(expected) != len(actual) {
 		return fmt.Errorf("docker SDK: resolved Go module count mismatch")
 	}
 

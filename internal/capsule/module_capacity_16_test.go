@@ -11,7 +11,19 @@ func TestGoModuleGraphSupports16Modules(t *testing.T) {
 		t.Fatalf("got %d modules, want 16", len(modules))
 	}
 
-	if _, err := ParseGoModuleGraphV3(moduleGraphFixture(17)); err == nil {
-		t.Fatal("17-module graph unexpectedly accepted")
+	for _, count := range []int{17, MaxGoSelectedModulesV3} {
+		modules, err := ParseGoModuleGraphV3(moduleGraphFixture(count))
+		if err != nil {
+			t.Fatalf("%d-module graph rejected: %v", count, err)
+		}
+		if len(modules) != count {
+			t.Fatalf("got %d modules, want %d", len(modules), count)
+		}
+	}
+
+	if _, err := ParseGoModuleGraphV3(
+		moduleGraphFixture(MaxGoSelectedModulesV3 + 1),
+	); err == nil {
+		t.Fatal("65-module graph unexpectedly accepted")
 	}
 }

@@ -68,11 +68,11 @@ func BuildGoModuleSnapshotV3(
 		return nil, fmt.Errorf("capsule: missing go.sum")
 	}
 
-	selectedArtifacts, graphArtifacts, err := SplitGoArtifactsV3(
-		verified.Manifest.GoModules,
-		verified.Manifest.GoGraphModFiles,
-		verified.Artifacts,
-	)
+	selectedArtifacts, graphArtifacts, infoArtifacts, err :=
+		SplitExtendedGoArtifactsV3(
+			verified.Manifest,
+			verified.Artifacts,
+		)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"capsule: split module artifacts: %w", err,
@@ -96,6 +96,15 @@ func BuildGoModuleSnapshotV3(
 	); err != nil {
 		return nil, fmt.Errorf(
 			"capsule: invalid graph module artifacts: %w", err,
+		)
+	}
+
+	if err := VerifyGoGraphInfoArtifactSetV3(
+		verified.Manifest.GoGraphInfoFiles,
+		infoArtifacts,
+	); err != nil {
+		return nil, fmt.Errorf(
+			"capsule: invalid graph info artifacts: %w", err,
 		)
 	}
 
@@ -195,6 +204,53 @@ func BuildGoModuleSnapshotV3(
 		if _, err := writer.Write(data); err != nil {
 			return nil, fmt.Errorf(
 				"capsule: write graph module TAR content: %w", err,
+			)
+		}
+	}
+
+	for _, infoFile := range verified.Manifest.GoGraphInfoFiles {
+		escapedPath, err := module.EscapePath(infoFile.Path)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"capsule: escape graph info module path: %w", err,
+			)
+		}
+
+		escapedVersion, err := module.EscapeVersion(infoFile.Version)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"capsule: escape graph info version: %w", err,
+			)
+		}
+
+		data, ok := infoArtifacts[infoFile.Artifact.Path]
+		if !ok {
+			return nil, fmt.Errorf(
+				"capsule: missing graph info artifact %q",
+				infoFile.Artifact.Path,
+			)
+		}
+
+		header := &tar.Header{
+			Name: path.Join(
+				"cache", "download",
+				escapedPath, "@v",
+				escapedVersion+".info",
+			),
+			Mode:     0644,
+			Size:     int64(len(data)),
+			Typeflag: tar.TypeReg,
+		}
+
+		if err := writer.WriteHeader(header); err != nil {
+			return nil, fmt.Errorf(
+				"capsule: write graph info TAR header: %w", err,
+			)
+		}
+
+		if _, err := writer.Write(data); err != nil {
+			return nil, fmt.Errorf(
+				"capsule: write graph info TAR data: %w", err,
 			)
 		}
 	}
