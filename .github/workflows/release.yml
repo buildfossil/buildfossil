@@ -43,7 +43,7 @@ jobs:
           if [[ "$DRY_RUN" == "true" ]]; then
             echo "DRY RUN: validating checkout $(git rev-parse HEAD)"
           else
-            git fetch origin main --tags
+            git fetch origin main
 
             tag_commit="$(git rev-parse --verify "refs/tags/$RELEASE_VERSION^{commit}")"
             main_commit="$(git rev-parse origin/main)"
