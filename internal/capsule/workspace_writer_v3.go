@@ -15,7 +15,7 @@ var goArtifactNamesV3 = []string{
 }
 
 // WriteWorkspaceV3 writes a schema-v3 capsule containing a workspace
-// and up to eight verified Go modules.
+// and up to sixteen verified Go modules.
 //
 // It validates all inputs before writing any bytes to w.
 func WriteWorkspaceV3(

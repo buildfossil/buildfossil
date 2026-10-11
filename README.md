@@ -46,7 +46,7 @@ The schema-v3 prototype supports:
 
 - Go 1.26.6.
 - The exact command `go build ./...`.
-- Up to eight selected external Go modules, including transitive dependencies.
+- Up to sixteen selected external Go modules, including transitive dependencies.
 - Selected regular workspace files.
 - Verified `.zip`, `.mod`, and `.info` artifacts for every selected external module.
 - SHA-256 and Go module checksum verification.
@@ -366,7 +366,7 @@ A schema-v3 `.bfc` capsule contains:
 - Selected workspace files and their integrity metadata.
 - Captured build environment information.
 - Zero dependency artifacts for dependency-free builds, or three
-  verified artifacts per selected external Go module (up to eight modules).
+  verified artifacts per selected external Go module (up to sixteen modules).
 - Recorded command output and exit status.
 
 The archive is verified before replay. Workspace and module-cache
@@ -401,7 +401,7 @@ The current schema-v3 implementation:
 
 - Supports only the exact command `go build ./...`.
 - Requires Go 1.26.6.
-- Supports up to eight selected external Go modules, including transitive dependencies.
+- Supports up to sixteen selected external Go modules, including transitive dependencies.
 - Requires explicit inclusion of `go.mod` and necessary source files.
   Existing `go.sum` files must be included; dependency-free projects
   without `go.sum` are supported.

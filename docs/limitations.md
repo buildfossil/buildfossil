@@ -90,9 +90,20 @@ Other commands are outside the supported scope, including:
 
 These restrictions allow the implementation to make more explicit assumptions about the execution environment.
 
+## Schema v3 Reader Compatibility
+
+The expanded 16-module limit does not change the schema-v3
+manifest structure or the existing capsule size limits.
+
+BuildFossil v0.1.0-alpha.2 readers support at most eight external
+Go modules. They reject schema-v3 capsules containing 9–16 modules.
+
+Readers with the expanded capacity are intended to remain compatible
+with previously valid schema-v3 capsules containing 0–8 modules.
+
 ## Go Dependency Restrictions
 
-The current prototype supports up to eight selected external Go
+The current prototype supports up to sixteen selected external Go
 modules, including transitive dependencies, provided their verified
 artifacts are already present in the local Go module cache.
 

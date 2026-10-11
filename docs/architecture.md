@@ -108,7 +108,7 @@ For the current supported dependency scenario, both `go.mod` and `go.sum` must b
 
 ## Go Dependency Capture
 
-The implementation supports up to eight selected external Go modules,
+The implementation supports up to sixteen selected external Go modules,
 including transitive dependencies.
 
 Capture first resolves the selected module graph offline using

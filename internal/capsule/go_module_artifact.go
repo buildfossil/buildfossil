@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	MaxGoModulesV3                  = 8
+	MaxGoModulesV3                  = 16
 	MaxGoModuleArtifactsV3          = 3
 	MaxGoModuleTotalSizeV3    int64 = 16 << 20
 	MaxGoModuleUnpackedSizeV3 int64 = 16 << 20
