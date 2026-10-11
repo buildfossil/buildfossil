@@ -62,9 +62,10 @@ The schema-v3 format is experimental and may change.
 Projects with no external Go dependencies are supported. For these
 projects, the capsule contains no dependency artifacts.
 
-Capture requires explicitly including both `go.mod` and `go.sum`,
-even when `go.sum` is empty. Active Go workspaces (`go.work`) are
-not supported; use `GOWORK=off`.
+Capture requires including `go.mod` and necessary source files.
+An existing `go.sum` must also be included. Dependency-free Go projects
+without `go.sum` are supported: an empty file is embedded in the capsule.
+Active Go workspaces (`go.work`) are unsupported; use `GOWORK=off`.
 
 ## Requirements
 
@@ -76,6 +77,39 @@ For development and the supported schema-v3 workflow:
 - Access to the pinned replay image when it is not already cached.
 
 Replay containers run without network access. The Docker host may still need network access to obtain the pinned image.
+
+## Install
+
+The current public alpha is [v0.1.0-alpha.2](https://github.com/buildfossil/buildfossil/releases/tag/v0.1.0-alpha.2).
+
+Prebuilt binaries are available for macOS ARM64 and Linux AMD64.
+These binaries are experimental and not production-ready.
+
+Download the archive for your platform and SHA256SUMS from the release page.
+Verify the downloaded archive against its SHA-256 checksum before extracting it.
+
+macOS ARM64:
+
+    grep 'buildfossil_v0.1.0-alpha.2_darwin_arm64.tar.gz' SHA256SUMS | shasum -a 256 -c -
+    tar -xzf buildfossil_v0.1.0-alpha.2_darwin_arm64.tar.gz
+    ./buildfossil version
+
+Linux AMD64:
+
+    grep 'buildfossil_v0.1.0-alpha.2_linux_amd64.tar.gz' SHA256SUMS | sha256sum -c -
+    tar -xzf buildfossil_v0.1.0-alpha.2_linux_amd64.tar.gz
+    ./buildfossil version
+
+The checksum verification must report OK before extracting the archive.
+The expected version is `buildfossil v0.1.0-alpha.2`.
+
+Set the CLI path before following Quick Start:
+
+    export BUILDFOSSIL_BIN="$(pwd)/buildfossil"
+
+The macOS binary is not Developer ID signed or notarized.
+macOS Gatekeeper may require explicit approval.
+Do not run binaries from untrusted sources.
 
 ## Install from Source
 
@@ -94,7 +128,7 @@ Locally built development binaries normally report `buildfossil dev`.
 Binaries installed from a tagged Go module report the module version.
 Official release binaries can embed their version at build time.
 
-No stable release or binary distribution is provided yet.
+Public alpha binaries are available; no stable release is available yet.
 
 ## Command-Line Help
 
@@ -109,7 +143,125 @@ The `capture` and `replay` help commands describe the supported schema-v3
 workflow. Older experimental modes remain available but are not the
 recommended starting point.
 
-## Quick Start: Capture a Go Build Failure
+## Quick Start: Reproduce a Failed Build
+
+This example requires Go 1.26.6, Docker with Linux AMD64
+support, and the BuildFossil CLI installed above.
+
+Create a dependency-free Go project:
+
+```sh
+mkdir buildfossil-example
+cd buildfossil-example
+
+cat > go.mod <<'MOD'
+module example.com/buildfossil-quickstart
+
+go 1.26.0
+MOD
+
+cat > main.go <<'GO'
+package main
+
+func main() {
+    undefinedFunction()
+}
+GO
+```
+
+Capture the intentional compiler failure:
+
+```sh
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOFLAGS='' \
+GOWORK=off GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off \
+"$BUILDFOSSIL_BIN" capture --v3 \
+  --include go.mod \
+  --include main.go \
+  -- go build ./...
+```
+
+The build fails intentionally and BuildFossil saves `failure.bfc`.
+A successful capture normally returns the original build's
+nonzero exit code.
+
+No `go.sum` is required for this dependency-free example.
+BuildFossil does not create `go.sum` in the source project.
+
+Replay the failure using Docker:
+
+```sh
+"$BUILDFOSSIL_BIN" replay --v3 --allow-command --memory 1g failure.bfc
+```
+
+Expected output:
+
+```text
+Original exit code: 1
+Replay exit code:   1
+Outcome:            reproduced
+Replay memory:      1 GiB
+```
+
+Only replay capsules from trusted sources. Replay executes
+the command recorded inside the capsule.
+
+## Understanding Replay Results
+
+Make the `.bfc` capsule available on a machine with a supported Docker environment.
+
+Run:
+
+```sh
+"$BUILDFOSSIL_BIN" replay --v3 --allow-command failure.bfc
+```
+
+When Replay v3 returns `different_failure` (exit code `11`), it also
+reports the category of the mismatch:
+
+- `exit codes differ`: the original and replayed commands exited with different codes.
+- `stderr differs`: exit codes match, but the captured and replayed standard error differ.
+
+For example:
+
+    Original exit code: 1
+    Replay exit code:   1
+    Outcome:            different_failure
+    Difference:         stderr differs
+
+BuildFossil does not print the full stderr difference. If the captured or
+replayed stderr was truncated, the comparison is `inconclusive` rather than
+claiming a complete mismatch.
+
+Schema-v3 replay uses 256 MiB of container memory by default.
+
+For memory-intensive builds or AMD64 emulation on ARM64, use:
+
+    "$BUILDFOSSIL_BIN" replay --v3 --allow-command --memory 1g failure.bfc
+
+Supported values: 256m, 512m, 1g, 2g. Maximum: 2 GiB.
+This option applies only to schema-v3 replay.
+
+Changing memory limits can change the replay outcome.
+Other Docker security restrictions remain unchanged.
+
+For rootless Docker, set DOCKER_HOST to the rootless Docker socket
+if automatic connection fails.
+
+A successfully reproduced failure reports output similar to:
+
+```text
+Original exit code: 1
+Replay exit code:   1
+Outcome:            reproduced
+```
+
+`reproduced` means BuildFossil's current comparison logic considers the captured and replayed failures equivalent.
+
+It does not prove that every aspect of the original execution environment was reconstructed.
+
+**Only replay capsules from sources you trust.** The `--allow-command` option explicitly permits execution of the command recorded in the capsule.
+
+## Advanced Example: External Go Dependency
 
 The following example creates a small Go project with one external dependency and an intentional compiler error.
 
@@ -175,10 +327,10 @@ Ensure no external Go workspace is active:
 export GOWORK=off
 ```
 
-Run the BuildFossil executable built in the previous step, replacing `"$BUILDFOSSIL_BIN"` with its actual absolute path:
+Run the BuildFossil executable using the `BUILDFOSSIL_BIN` variable defined during installation:
 
 ```sh
-/path/to/buildfossil capture --v3 \
+"$BUILDFOSSIL_BIN" capture --v3 \
   --include go.mod \
   --include go.sum \
   --include main.go \
@@ -205,61 +357,6 @@ A successfully captured compiler failure normally preserves the original nonzero
 
 If capture itself fails, BuildFossil may exit with code `125` and will not produce a valid new capsule.
 
-## Replay the Failure
-
-Make the `.bfc` capsule available on a machine with a supported Docker environment.
-
-Run:
-
-```sh
-/path/to/buildfossil replay --v3 --allow-command failure.bfc
-```
-
-When Replay v3 returns `different_failure` (exit code `11`), it also
-reports the category of the mismatch:
-
-- `exit codes differ`: the original and replayed commands exited with different codes.
-- `stderr differs`: exit codes match, but the captured and replayed standard error differ.
-
-For example:
-
-    Original exit code: 1
-    Replay exit code:   1
-    Outcome:            different_failure
-    Difference:         stderr differs
-
-BuildFossil does not print the full stderr difference. If the captured or
-replayed stderr was truncated, the comparison is `inconclusive` rather than
-claiming a complete mismatch.
-
-Schema-v3 replay uses 256 MiB of container memory by default.
-
-For memory-intensive builds or AMD64 emulation on ARM64, use:
-
-    /path/to/buildfossil replay --v3 --allow-command --memory 1g failure.bfc
-
-Supported values: 256m, 512m, 1g, 2g. Maximum: 2 GiB.
-This option applies only to schema-v3 replay.
-
-Changing memory limits can change the replay outcome.
-Other Docker security restrictions remain unchanged.
-
-For rootless Docker, set DOCKER_HOST to the rootless Docker socket
-if automatic connection fails.
-
-A successfully reproduced failure reports output similar to:
-
-```text
-Original exit code: 1
-Replay exit code:   1
-Outcome:            reproduced
-```
-
-`reproduced` means BuildFossil's current comparison logic considers the captured and replayed failures equivalent.
-
-It does not prove that every aspect of the original execution environment was reconstructed.
-
-**Only replay capsules from sources you trust.** The `--allow-command` option explicitly permits execution of the command recorded in the capsule.
 
 ## What Is Inside a Capsule?
 
@@ -305,8 +402,9 @@ The current schema-v3 implementation:
 - Supports only the exact command `go build ./...`.
 - Requires Go 1.26.6.
 - Supports up to eight selected external Go modules, including transitive dependencies.
-- Requires explicit inclusion of `go.mod` and `go.sum`, even for
-  dependency-free builds.
+- Requires explicit inclusion of `go.mod` and necessary source files.
+  Existing `go.sum` files must be included; dependency-free projects
+  without `go.sum` are supported.
 - Does not support active Go workspaces (`go.work`), `replace`,
   or `exclude` directives.
 - Requires the selected module graph and all module download artifacts
@@ -377,7 +475,7 @@ go build -o buildfossil ./cmd/buildfossil
 
 BuildFossil is in active experimental development.
 
-Before a public alpha release, the project requires additional security review, documentation, installation testing, and compatibility validation.
+Public alpha releases are available for early testing. Further security review, documentation, installation testing, and compatibility validation remain necessary before a stable release.
 
 The next priorities include:
 
