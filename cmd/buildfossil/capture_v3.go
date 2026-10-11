@@ -121,10 +121,22 @@ func captureCommandV3(
 		}
 	}
 
-	if !hasGoMod || !hasGoSum {
+	if !hasGoMod {
 		fmt.Fprintln(os.Stderr,
-			"buildfossil: v3 requires --include go.mod and --include go.sum")
+			"buildfossil: v3 requires --include go.mod")
 		return 125
+	}
+
+	if !hasGoSum {
+		if _, err := os.Lstat(filepath.Join(workspaceRoot, "go.sum")); err == nil {
+			fmt.Fprintln(os.Stderr,
+				"buildfossil: existing go.sum must be explicitly included")
+			return 125
+		} else if !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr,
+				"buildfossil: inspect go.sum: %v\n", err)
+			return 125
+		}
 	}
 
 	cacheCommand := exec.Command("go", "env", "GOMODCACHE")
@@ -154,14 +166,40 @@ func captureCommandV3(
 		return 125
 	}
 
-	// The graph must describe the same go.mod/go.sum bytes that
-	// will be embedded in the capsule.
+	// A dependency-free module may legitimately have no go.sum.
+	// Preserve the v3 archive contract by adding a virtual empty
+	// go.sum only after resolving the complete offline module graph.
+	if !hasGoSum {
+		if len(selectedModules) != 0 {
+			fmt.Fprintln(os.Stderr,
+				"buildfossil: go.sum is required for external Go modules")
+			return 125
+		}
+
+		if _, err := os.Lstat(filepath.Join(workspaceRoot, "go.sum")); err == nil {
+			fmt.Fprintln(os.Stderr,
+				"buildfossil: go.sum appeared during module graph resolution")
+			return 125
+		} else if !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr,
+				"buildfossil: inspect go.sum: %v\n", err)
+			return 125
+		}
+
+		files = append(files, capsule.WorkspaceFile{
+			Path: "go.sum",
+			Data: []byte{},
+			Mode: 0644,
+		})
+	}
+
+	// The graph must describe the same included go.mod/go.sum bytes
+	// that will be embedded in the capsule.
 	for _, original := range []struct {
 		name string
 		data []byte
 	}{
 		{"go.mod", goMod},
-		{"go.sum", goSum},
 	} {
 		current, err := os.ReadFile(
 			filepath.Join(workspaceRoot, original.name),
@@ -171,6 +209,15 @@ func captureCommandV3(
 				"buildfossil: %s changed during module graph resolution\n",
 				original.name,
 			)
+			return 125
+		}
+	}
+
+	if hasGoSum {
+		current, err := os.ReadFile(filepath.Join(workspaceRoot, "go.sum"))
+		if err != nil || !bytes.Equal(current, goSum) {
+			fmt.Fprintln(os.Stderr,
+				"buildfossil: go.sum changed during module graph resolution")
 			return 125
 		}
 	}
@@ -196,7 +243,7 @@ func captureCommandV3(
 	}
 
 	if err := verifyCapturedWorkspaceV3(
-		workspaceRoot, includes, files,
+		workspaceRoot, includes, beforeFiles,
 	); err != nil {
 		fmt.Fprintf(os.Stderr,
 			"buildfossil: workspace changed before packaging: %v\n", err)
