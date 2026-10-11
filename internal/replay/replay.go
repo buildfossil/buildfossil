@@ -24,6 +24,10 @@ type Result struct {
 type Options struct {
 	AllowArbitraryCommand bool
 	DiagnoseDependencies  bool
+
+	// MemoryBytes overrides the schema-v3 execution container
+	// memory limit. Zero uses the default 256 MiB limit.
+	MemoryBytes int64
 }
 
 func Run(ctx context.Context, capsulePath string) (Result, error) {
