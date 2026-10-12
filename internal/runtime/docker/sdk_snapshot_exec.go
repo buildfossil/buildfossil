@@ -298,8 +298,9 @@ func runWithSDKRuntimeSnapshotExecSelectiveReaders(
 	if err := applyReplayMemoryV3(&options, memoryBytes); err != nil {
 		return 0, err
 	}
-	created, err := dockerClient.ContainerCreate(
+	created, err := createSnapshotExecutionContainer(
 		execCtx,
+		dockerClient,
 		options,
 	)
 	if err != nil {
@@ -431,4 +432,41 @@ func newSnapshotExecutionOptions(
 	options.HostConfig.Mounts = snapshotExecutionMounts(volumes)
 
 	return options
+}
+
+// createSnapshotExecutionContainer identifies each creation attempt before
+// contacting Docker, so an ambiguous response can be cleaned up safely.
+func createSnapshotExecutionContainer(
+	ctx context.Context,
+	dockerClient *client.Client,
+	options client.ContainerCreateOptions,
+) (client.ContainerCreateResult, error) {
+	token, err := newRunID()
+	if err != nil {
+		return client.ContainerCreateResult{}, err
+	}
+
+	name := "buildfossil-snapshot-exec-" + token
+	options.Name = name
+	options.Config.Labels["org.buildfossil.ownership-token"] = token
+
+	created, err := dockerClient.ContainerCreate(ctx, options)
+	if err != nil {
+		cleanupErr := cleanupUnknownContainer(
+			dockerClient,
+			name,
+			token,
+			"snapshot execution",
+			client.ContainerRemoveOptions{
+				Force:         true,
+				RemoveVolumes: true,
+			},
+		)
+		return client.ContainerCreateResult{}, errors.Join(
+			err,
+			cleanupErr,
+		)
+	}
+
+	return created, nil
 }

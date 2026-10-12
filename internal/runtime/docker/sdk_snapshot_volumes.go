@@ -351,6 +351,22 @@ func cleanupUnknownPreparationContainer(
 	name string,
 	token string,
 ) error {
+	return cleanupUnknownContainer(
+		dockerClient,
+		name,
+		token,
+		"preparation",
+		client.ContainerRemoveOptions{Force: true},
+	)
+}
+
+func cleanupUnknownContainer(
+	dockerClient *client.Client,
+	name string,
+	token string,
+	kind string,
+	removeOptions client.ContainerRemoveOptions,
+) error {
 	ctx, cancel := context.WithTimeout(
 		context.Background(), snapshotCleanupTimeout,
 	)
@@ -364,8 +380,8 @@ func cleanupUnknownPreparationContainer(
 	}
 	if err != nil {
 		return fmt.Errorf(
-			"docker SDK: inspect uncertain preparation container %s: %w",
-			name, err,
+			"docker SDK: inspect uncertain %s container %s: %w",
+			kind, name, err,
 		)
 	}
 
@@ -375,20 +391,20 @@ func cleanupUnknownPreparationContainer(
 		inspected.Container.Config.Labels["org.buildfossil.ownership-token"] != token ||
 		inspected.Container.ID == "" {
 		return fmt.Errorf(
-			"docker SDK: uncertain preparation container %s has unverified ownership",
-			name,
+			"docker SDK: uncertain %s container %s has unverified ownership",
+			kind, name,
 		)
 	}
 
 	_, err = dockerClient.ContainerRemove(
 		ctx,
 		inspected.Container.ID,
-		client.ContainerRemoveOptions{Force: true},
+		removeOptions,
 	)
 	if err != nil {
 		return fmt.Errorf(
-			"docker SDK: remove uncertain preparation container %s: %w",
-			name, err,
+			"docker SDK: remove uncertain %s container %s: %w",
+			kind, name, err,
 		)
 	}
 	return nil
