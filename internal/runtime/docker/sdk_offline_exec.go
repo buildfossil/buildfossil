@@ -123,7 +123,11 @@ func RunWithSDKRuntimeOfflineExec(
 		},
 	)
 
-	created, err := dockerClient.ContainerCreate(execCtx, options)
+	created, err := createOfflineExecutionContainer(
+		execCtx,
+		dockerClient,
+		options,
+	)
 	if err != nil {
 		return 0, fmt.Errorf("docker SDK: create offline container: %w", err)
 	}
@@ -174,4 +178,42 @@ func RunWithSDKRuntimeOfflineExec(
 	}
 
 	return code, nil
+}
+
+// createOfflineExecutionContainer identifies the container before contacting
+// Docker so an ambiguous creation response can be cleaned up safely.
+func createOfflineExecutionContainer(
+	ctx context.Context,
+	dockerClient *client.Client,
+	options client.ContainerCreateOptions,
+) (client.ContainerCreateResult, error) {
+	token, err := newRunID()
+	if err != nil {
+		return client.ContainerCreateResult{}, err
+	}
+
+	name := "buildfossil-offline-exec-" + token
+	options.Name = name
+	options.Config.Labels["org.buildfossil.ownership-token"] = token
+
+	created, err := dockerClient.ContainerCreate(ctx, options)
+	if err != nil {
+		cleanupErr := cleanupUnknownContainer(
+			dockerClient,
+			name,
+			token,
+			"offline execution",
+			client.ContainerRemoveOptions{
+				Force:         true,
+				RemoveVolumes: true,
+			},
+		)
+
+		return client.ContainerCreateResult{}, errors.Join(
+			err,
+			cleanupErr,
+		)
+	}
+
+	return created, nil
 }
