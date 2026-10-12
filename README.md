@@ -46,7 +46,7 @@ The schema-v3 prototype supports:
 
 - Go 1.26.6.
 - The exact command `go build ./...`.
-- Up to 64 selected external Go modules, including transitive dependencies; up to 16 with full ZIP artifacts.
+- Up to 128 selected external Go modules, including transitive dependencies; up to 64 with full ZIP artifacts.
 - Selected regular workspace files.
 - Verified full `.zip`, `.mod`, and `.info` artifacts for build-required modules; metadata-only artifacts for other selected modules.
 - SHA-256 and Go module checksum verification.
@@ -80,7 +80,7 @@ Replay containers run without network access. The Docker host may still need net
 
 ## Install
 
-The current public alpha is [v0.1.0-alpha.2](https://github.com/buildfossil/buildfossil/releases/tag/v0.1.0-alpha.2).
+The current public alpha is [v0.1.0-alpha.3](https://github.com/buildfossil/buildfossil/releases/tag/v0.1.0-alpha.3).
 
 Prebuilt binaries are available for macOS ARM64 and Linux AMD64.
 These binaries are experimental and not production-ready.
@@ -90,18 +90,18 @@ Verify the downloaded archive against its SHA-256 checksum before extracting it.
 
 macOS ARM64:
 
-    grep 'buildfossil_v0.1.0-alpha.2_darwin_arm64.tar.gz' SHA256SUMS | shasum -a 256 -c -
-    tar -xzf buildfossil_v0.1.0-alpha.2_darwin_arm64.tar.gz
+    grep 'buildfossil_v0.1.0-alpha.3_darwin_arm64.tar.gz' SHA256SUMS | shasum -a 256 -c -
+    tar -xzf buildfossil_v0.1.0-alpha.3_darwin_arm64.tar.gz
     ./buildfossil version
 
 Linux AMD64:
 
-    grep 'buildfossil_v0.1.0-alpha.2_linux_amd64.tar.gz' SHA256SUMS | sha256sum -c -
-    tar -xzf buildfossil_v0.1.0-alpha.2_linux_amd64.tar.gz
+    grep 'buildfossil_v0.1.0-alpha.3_linux_amd64.tar.gz' SHA256SUMS | sha256sum -c -
+    tar -xzf buildfossil_v0.1.0-alpha.3_linux_amd64.tar.gz
     ./buildfossil version
 
 The checksum verification must report OK before extracting the archive.
-The expected version is `buildfossil v0.1.0-alpha.2`.
+The expected version is `buildfossil v0.1.0-alpha.3`.
 
 Set the CLI path before following Quick Start:
 
@@ -366,7 +366,7 @@ A schema-v3 `.bfc` capsule contains:
 - Selected workspace files and their integrity metadata.
 - Captured build environment information.
 - Zero dependency artifacts for dependency-free builds, or three
-  verified artifacts per selected external Go module (up to sixteen modules).
+  verified artifacts per build-required external Go module (up to 64 modules).
 - Recorded command output and exit status.
 
 The archive is verified before replay. Workspace and module-cache
@@ -401,7 +401,7 @@ The current schema-v3 implementation:
 
 - Supports only the exact command `go build ./...`.
 - Requires Go 1.26.6.
-- Supports up to 64 selected external Go modules, including transitive dependencies, with at most 16 full ZIP modules.
+- Supports up to 128 selected external Go modules, including transitive dependencies, with at most 64 full ZIP modules.
 - Requires explicit inclusion of `go.mod` and necessary source files.
   Existing `go.sum` files must be included; dependency-free projects
   without `go.sum` are supported.
@@ -409,8 +409,8 @@ The current schema-v3 implementation:
   or `exclude` directives.
 - Requires the selected module graph and all required full or metadata-only
   module artifacts to be available locally during offline capture.
-- Rejects module graphs containing more than 64 selected external modules or builds requiring more than 16 full ZIP modules.
-- Captures up to 64 additional graph-only `.mod` files, with a combined
+- Rejects module graphs containing more than 128 selected external modules or builds requiring more than 64 full ZIP modules.
+- Captures up to 128 additional graph-only `.mod` files, with a combined
   size limit of 1 MiB, when older module versions are needed for offline
   dependency graph reconstruction.
 - Requires those additional `.mod` files to be present in the local Go
@@ -425,7 +425,7 @@ The current schema-v3 implementation:
 - Is not approved for executing untrusted capsules.
 - Uses non-atomic workspace consistency checks during capture;
   concurrent changes may still escape detection.
-- Has unresolved security-hardening work, including filesystem race considerations.
+- Includes filesystem race mitigations for replay staging, but remaining trust-boundary and concurrent-modification risks require further review.
 
 Replaying a captured failure can produce a different result or fail when the supported reproducibility assumptions are not met.
 
@@ -468,7 +468,7 @@ go vet ./...
 Run Docker integration tests with a working Docker daemon:
 
 ```sh
-BUILDFOSSIL_DOCKER_TEST=1 go test -count=1 -timeout=8m ./...
+BUILDFOSSIL_DOCKER_TEST=1 go test -p 1 -count=1 -timeout 15m ./...
 ```
 
 Build the CLI:
@@ -489,7 +489,7 @@ The next priorities include:
 2. Hardening the replay staging and execution path.
 3. Expanding reproducibility tests.
 4. Improving failure diagnostics.
-5. Evaluating support for module graphs beyond eight external dependencies.
+5. Expanding real-world Go project compatibility within bounded resource limits.
 
 Features outside the documented supported scenarios should not be assumed to work.
 

@@ -31,7 +31,7 @@ Requirements:
   CGO_ENABLED=0 and empty GOFLAGS
   GOWORK=off when a Go workspace is active
   Explicitly include go.mod, go.sum, and required source files
-  At most 64 selected external Go modules; up to 16 with complete ZIP artifacts
+  At most 128 selected external Go modules; up to 64 with complete ZIP artifacts
   Active Go workspaces are unsupported
 
 Example:

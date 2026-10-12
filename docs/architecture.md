@@ -110,9 +110,9 @@ For the current supported dependency scenario, both `go.mod` and `go.sum` must b
 
 ## Go Dependency Capture
 
-The development implementation supports up to 64 selected external Go
-modules, including transitive dependencies. At most 16 modules may require
-complete ZIP artifacts.
+The schema-v3 implementation in v0.1.0-alpha.3 supports up to 128
+selected external Go modules, including transitive dependencies. At most
+64 modules may require complete ZIP artifacts.
 
 Capture first resolves the complete selected module graph offline using
 `go list -m -json all`. It also inspects `go list -deps -e -json ./...`
@@ -134,7 +134,7 @@ those versions are not selected for the build.
 
 These graph-only `.mod` files are stored separately from the selected
 modules' `.zip`, `.mod`, and `.info` artifacts. Capture permits at most
-64 graph-only metadata files with a combined size of 1 MiB. Each file
+128 graph-only metadata files with a combined size of 1 MiB. Each file
 is verified against SHA-256 and its corresponding `go.sum` `/go.mod`
 checksum before packaging.
 
@@ -149,6 +149,29 @@ are rejected rather than silently downloaded or captured.
 
 The selected graph is checked again inside the Docker replay container
 before the recorded build command is executed.
+
+## Disk-Backed Artifact Processing
+
+Schema-v3 capture and replay use bounded, disk-backed processing for
+larger Go projects rather than retaining all dependency artifacts and
+prepared snapshots in memory.
+
+During replay, BuildFossil verifies capsule contents into a temporary
+artifact store and constructs TAR snapshots from verified readers.
+Snapshot files are passed to the Docker upload path using retained file
+descriptors, avoiding pathname-based reopening after preparation.
+
+The snapshots are uploaded into Docker-managed volumes, which are
+mounted read-only in the execution container. The replay container
+runs without network access.
+
+The schema-v3 capsule limit is 96 MiB. Complete Go module artifacts
+have a combined 64 MiB budget, with an additional 16 MiB unpacked
+content limit per module.
+
+These mechanisms reduce resource usage and mitigate specific filesystem
+race risks, but they do not make arbitrary untrusted capsules safe to
+execute. See [Replay Staging Security Model](security-model.md).
 
 ## Capsule Format
 

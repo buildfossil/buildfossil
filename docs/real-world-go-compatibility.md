@@ -1,11 +1,66 @@
 # Real-World Go Compatibility — Development Validation
 
+## BuildFossil v0.1.0-alpha.3 Validation
+
+The larger-project implementation was integrated through
+[Pull Request #37](https://github.com/buildfossil/buildfossil/pull/37)
+and released from commit `7c47578978e109e60ae2c20b955442c365601cf4`.
+
+The schema-v3 implementation supports:
+
+- Up to 128 selected external Go modules.
+- Up to 64 modules with complete ZIP artifacts.
+- A combined 64 MiB module artifact budget.
+- A maximum 96 MiB schema-v3 capsule.
+- Up to 256 explicitly included workspace files.
+
+### Go-Task v3.40.1 — Successful Offline Reproduction
+
+A local validation used the upstream Go-Task v3.40.1 source at
+`32fa3a01561b16aee9c87ecf0b49be5b733bb3d1`.
+
+Observed results:
+
+- Workspace: 96 included files.
+- A failed `go build ./...` was captured into a schema-v3 capsule.
+- The capsule was replayed using the pinned Linux AMD64 Go runtime
+  in Docker with a 2 GiB container memory limit.
+- Original exit code: `1`.
+- Replay exit code: `1`.
+- Replay outcome: `reproduced`.
+
+This establishes reproduction of the tested failure, not general
+compatibility with every Go-Task build or Go project.
+
+### Release Verification
+
+The alpha.3 release candidate passed the tagged GitHub Actions
+validation workflow, including Go tests, static analysis, Docker E2E,
+archive creation, and SHA-256 verification.
+
+The public macOS ARM64 and Linux AMD64 release archives were downloaded
+from GitHub Releases and successfully verified against `SHA256SUMS`.
+The macOS ARM64 binary reported `buildfossil v0.1.0-alpha.3`.
+
+Release:
+https://github.com/buildfossil/buildfossil/releases/tag/v0.1.0-alpha.3
+
+Tagged validation:
+https://github.com/buildfossil/buildfossil/actions/runs/38202436931
+
+These results do not establish support for arbitrary Go projects,
+complete CI environments, or execution of untrusted capsules.
+
+---
+
 ## Scope
 
-This report records local compatibility checks performed against
-BuildFossil development commit `39ee427` in October 2026.
+This report records historical local compatibility checks performed
+against BuildFossil development commit `39ee427` in October 2026.
 
-These results do not describe the published `v0.1.0-alpha.2` binaries.
+The original results below describe the earlier implementation, not the
+published `v0.1.0-alpha.3` binaries. See the alpha.3 validation section
+for a separately verified larger-project reproduction.
 
 The tested implementation supports:
 
