@@ -10,7 +10,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/containerd/errdefs"
 	"github.com/moby/moby/api/types/mount"
 	"github.com/moby/moby/client"
 )
@@ -198,7 +197,7 @@ func createSnapshotVolumesFromReadersWithNameGenerator(
 		}
 
 		created, err := dockerClient.ContainerCreate(ctx, options)
-		if err != nil && !errdefs.IsNotFound(err) {
+		if err != nil {
 			return nil, fmt.Errorf(
 				"docker SDK: create %s preparation container: %w",
 				snapshot.kind, err,
