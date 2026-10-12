@@ -62,9 +62,12 @@ The schema-v3 format is experimental and may change.
 Projects with no external Go dependencies are supported. For these
 projects, the capsule contains no dependency artifacts.
 
-Capture requires including `go.mod` and necessary source files.
-An existing `go.sum` must also be included. Dependency-free Go projects
-without `go.sum` are supported: an empty file is embedded in the capsule.
+In the published v0.1.0-alpha.3 release, Capture requires explicitly
+including `go.mod`, necessary source files, and any existing `go.sum`.
+The development version also offers opt-in `--include-go-sources`
+to select main-module Go sources, `go.mod`, and any existing `go.sum`
+automatically. Dependency-free Go projects without `go.sum` are
+supported: an empty file is embedded in the capsule.
 Active Go workspaces (`go.work`) are unsupported; use `GOWORK=off`.
 
 ## Requirements
@@ -207,24 +210,51 @@ the command recorded inside the capsule.
 
 A maintainer-operated test of this public Quick Start is documented in the [alpha.3 Quick Start validation report](docs/alpha3-quickstart-validation.md). This is not independent external-user validation.
 
-## Automatic Go Embed Discovery
+## Automatic Go Source and Embed Discovery
 
-Schema-v3 Capture supports the optional `--include-go-embed` flag.
+The development version adds opt-in `--include-go-sources` support.
+This option is not available in the published v0.1.0-alpha.3 binaries.
+Build the CLI from this development branch to try it.
 
-Example command:
+For a supported Go project, run:
 
-    buildfossil capture --v3 --include go.mod --include main.go --include-go-embed -- go build ./...
+    "$BUILDFOSSIL_BIN" capture --v3 --include-go-sources -- go build ./...
 
-The flag discovers embedded resources using offline Go package metadata.
+This discovers selected main-module Go source files for Linux AMD64
+and, on macOS ARM64, the capture platform. It also includes `go.mod`
+and an existing `go.sum`. When `go.sum` does not exist, the existing
+virtual-empty-file behavior remains available for dependency-free builds.
 
-Go source files, go.mod, and any existing go.sum must still be included
-explicitly. Discovery does not download missing dependencies.
+Manual `--include` paths can be combined with automatic discovery.
+Paths discovered more than once are deduplicated; duplicate explicit
+`--include` paths remain an error.
 
-Discovery always checks linux/amd64 and also checks darwin/arm64 when Capture runs with that source target. Results are deduplicated. CGO is disabled, and custom build tags are not automatically supported.
+Embedded resources are separate. Add `--include-go-embed` to select
+resources referenced by `//go:embed` directives:
 
-The capsule workspace limit is 2048 files, including a virtual go.sum
-when required. Discovery is not sandboxed and should only be used
-with trusted source trees.
+    "$BUILDFOSSIL_BIN" capture --v3 --include-go-sources --include-go-embed -- go build ./...
+
+The existing `--include-go-embed` flag also works with manual source
+inclusion in the published release:
+
+    "$BUILDFOSSIL_BIN" capture --v3 --include go.mod --include main.go --include-go-embed -- go build ./...
+
+Discovery uses offline Go package metadata and does not download missing
+dependencies. It selects files recognized by the supported Go toolchain;
+it does not guarantee capture of every non-Go build input. CGO and
+custom build tags are not supported in this workflow.
+
+Discovery checks Linux AMD64 and also Darwin ARM64 when Capture uses
+that source target. Results are deduplicated. Discovery is not sandboxed:
+use it only with trusted source trees.
+
+**Privacy:** selected source files, embedded resources, and explicit
+includes become part of the `.bfc` capsule. Review the contents and
+avoid sharing capsules containing secrets or confidential source code.
+
+The workspace limit in the current development schema-v3 implementation
+is 2048 archived files, including a virtual `go.sum` when required.
+The published v0.1.0-alpha.3 release supports 256 files.
 
 ## Understanding Replay Results
 
@@ -435,9 +465,11 @@ The current schema-v3 implementation:
 - Supports only the exact command `go build ./...`.
 - Requires Go 1.26.6.
 - Supports up to 128 selected external Go modules, including transitive dependencies, with at most 64 full ZIP modules.
-- Requires explicit inclusion of `go.mod` and necessary source files.
-  Existing `go.sum` files must be included; dependency-free projects
-  without `go.sum` are supported.
+- The published v0.1.0-alpha.3 release requires explicit inclusion
+  of `go.mod`, necessary source files, and any existing `go.sum`.
+  The development version can select these automatically using
+  `--include-go-sources`. Dependency-free projects without `go.sum`
+  are supported.
 - Does not support active Go workspaces (`go.work`), `replace`,
   or `exclude` directives.
 - Requires the selected module graph and all required full or metadata-only
@@ -450,7 +482,14 @@ The current schema-v3 implementation:
   module cache and verified against `/go.mod` entries in `go.sum`.
 - Does not support arbitrary-sized dependency graphs.
 - Does not support general-purpose CI job capture.
-- Requires workspace files to be explicitly included (maximum 2048 files in the current development schema-v3 implementation; the published v0.1.0-alpha.3 release supports 256). Without `--include-go-embed`, embedded resources must be explicitly included. With `--include-go-embed`, BuildFossil automatically discovers embedded resources in main-module packages.
+- Requires explicit inclusion of other workspace inputs not
+  selected by Go source or embed discovery. Automatic discovery is
+  opt-in and does not guarantee a complete source-tree snapshot.
+  The current development schema-v3 implementation allows up to
+  2048 archived files; published v0.1.0-alpha.3 supports 256.
+  Without `--include-go-embed`, embedded resources must be included
+  manually. With that flag, main-module embedded resources are
+  discovered automatically.
 - The schema-v2 workspace limit remains 64 files.
 - Does not create a complete filesystem or process snapshot.
 - Does not guarantee reproduction across all host and target platforms.
