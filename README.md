@@ -280,6 +280,18 @@ Outcome:            reproduced
 
 It does not prove that every aspect of the original execution environment was reconstructed.
 
+For schema-v3 replay, matching exit codes in the range `129–159` are
+classified as `inconclusive`, even when stderr matches exactly.
+These codes can represent signal termination under the common
+`128 + signal` convention. Docker Exec does not reliably distinguish
+signal termination from an explicit exit with the same code.
+
+This is a conservative heuristic, not a signal or OOM detector.
+An application that intentionally exits with a code in this range
+may therefore also receive `inconclusive`. The shared comparison
+logic used by older replay schemas remains unchanged.
+
+
 **Only replay capsules from sources you trust.** The `--allow-command` option explicitly permits execution of the command recorded in the capsule.
 
 ## Advanced Example: External Go Dependency
