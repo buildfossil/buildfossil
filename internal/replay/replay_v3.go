@@ -13,7 +13,7 @@ import (
 )
 
 // RunV3WithOptions replays a verified schema-v3 capsule with
-// up to 64 selected Go modules, with at most 16 complete module ZIPs, without network access.
+// up to 128 selected Go modules, with at most 64 complete module ZIPs, without network access.
 //
 // Experimental: uses Docker Exec, which is not equivalent to PID 1.
 func RunV3WithOptions(

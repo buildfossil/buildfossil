@@ -83,7 +83,7 @@ gofmt -l ./cmd ./internal
 Run Docker-dependent integration tests when Docker is available:
 
 ```sh
-BUILDFOSSIL_DOCKER_TEST=1 go test -count=1 -timeout=8m ./...
+BUILDFOSSIL_DOCKER_TEST=1 go test -p 1 -count=1 -timeout 15m ./...
 ```
 
 Docker-dependent tests may pull the pinned replay image. Check that Docker is running and your machine supports the required architecture.
