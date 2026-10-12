@@ -2,6 +2,8 @@ package capsule
 
 import (
 	"archive/tar"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"path"
@@ -136,8 +138,15 @@ func WriteGoModuleSnapshotFromStoreV3(
 			)
 		}
 
+		metadata, ok := verified.Store.names[source]
+		if !ok {
+			_ = file.Close()
+			return fmt.Errorf("capsule: missing stored artifact %q", source)
+		}
+
+		hash := sha256.New()
 		written, copyErr := io.CopyN(
-			writer, file, expectedSize,
+			io.MultiWriter(writer, hash), file, expectedSize,
 		)
 		closeErr := file.Close()
 
@@ -156,6 +165,12 @@ func WriteGoModuleSnapshotFromStoreV3(
 			return fmt.Errorf(
 				"capsule: close artifact %q: %w",
 				source, closeErr,
+			)
+		}
+		if hex.EncodeToString(hash.Sum(nil)) != metadata.digest {
+			return fmt.Errorf(
+				"capsule: artifact %q changed during snapshot copy",
+				source,
 			)
 		}
 		return nil
