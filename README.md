@@ -207,6 +207,25 @@ the command recorded inside the capsule.
 
 A maintainer-operated test of this public Quick Start is documented in the [alpha.3 Quick Start validation report](docs/alpha3-quickstart-validation.md). This is not independent external-user validation.
 
+## Automatic Go Embed Discovery
+
+Schema-v3 Capture supports the optional `--include-go-embed` flag.
+
+Example command:
+
+    buildfossil capture --v3 --include go.mod --include main.go --include-go-embed -- go build ./...
+
+The flag discovers embedded resources using offline Go package metadata.
+
+Go source files, go.mod, and any existing go.sum must still be included
+explicitly. Discovery does not download missing dependencies.
+
+Discovery always checks linux/amd64 and also checks darwin/arm64 when Capture runs with that source target. Results are deduplicated. CGO is disabled, and custom build tags are not automatically supported.
+
+The capsule workspace limit is 2048 files, including a virtual go.sum
+when required. Discovery is not sandboxed and should only be used
+with trusted source trees.
+
 ## Understanding Replay Results
 
 Make the `.bfc` capsule available on a machine with a supported Docker environment.
@@ -419,7 +438,7 @@ The current schema-v3 implementation:
   module cache and verified against `/go.mod` entries in `go.sum`.
 - Does not support arbitrary-sized dependency graphs.
 - Does not support general-purpose CI job capture.
-- Requires workspace files to be explicitly included (maximum 2048 files in the current development schema-v3 implementation; the published v0.1.0-alpha.3 release supports 256). Files required by `go:embed` must also be explicitly included.
+- Requires workspace files to be explicitly included (maximum 2048 files in the current development schema-v3 implementation; the published v0.1.0-alpha.3 release supports 256). Without `--include-go-embed`, embedded resources must be explicitly included. With `--include-go-embed`, BuildFossil automatically discovers embedded resources in main-module packages.
 - The schema-v2 workspace limit remains 64 files.
 - Does not create a complete filesystem or process snapshot.
 - Does not guarantee reproduction across all host and target platforms.

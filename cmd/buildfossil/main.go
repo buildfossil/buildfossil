@@ -51,20 +51,36 @@ func run(args []string) int {
 
 		if len(args) >= 2 && args[1] == "--v3" {
 			var includes []string
+			includeGoEmbed := false
 			i := 2
 
-			for i < len(args) && args[i] == "--include" {
-				if i+1 >= len(args) ||
-					args[i+1] == "" ||
-					strings.HasPrefix(args[i+1], "--") {
-					fmt.Fprintln(os.Stderr,
-						"buildfossil: --include requires a file path")
-					return 2
-				}
+			for i < len(args) {
+				switch args[i] {
+				case "--include":
+					if i+1 >= len(args) ||
+						args[i+1] == "" ||
+						strings.HasPrefix(args[i+1], "--") {
+						fmt.Fprintln(os.Stderr,
+							"buildfossil: --include requires a file path")
+						return 2
+					}
+					includes = append(includes, args[i+1])
+					i += 2
 
-				includes = append(includes, args[i+1])
-				i += 2
+				case "--include-go-embed":
+					if includeGoEmbed {
+						fmt.Fprintln(os.Stderr,
+							"buildfossil: duplicate --include-go-embed")
+						return 2
+					}
+					includeGoEmbed = true
+					i++
+
+				default:
+					goto captureV3OptionsDone
+				}
 			}
+		captureV3OptionsDone:
 
 			if len(includes) == 0 ||
 				i >= len(args) ||
@@ -76,11 +92,12 @@ func run(args []string) int {
 				return 2
 			}
 
-			return captureCommandV3(
+			return captureCommandV3WithEmbed(
 				args[i+1:],
 				".",
 				includes,
 				"failure.bfc",
+				includeGoEmbed,
 			)
 		}
 

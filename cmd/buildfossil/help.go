@@ -23,15 +23,17 @@ func printCaptureHelp() {
 	fmt.Println(`Capture a failed Go build into a portable .bfc capsule.
 
 Usage:
-  buildfossil capture --v3 --include <file> ... -- go build ./...
+  buildfossil capture --v3 --include <file> ... [--include-go-embed] -- go build ./...
 
 Requirements:
   Go 1.26.6
   GOOS/GOARCH: darwin/arm64 or linux/amd64
   CGO_ENABLED=0 and empty GOFLAGS
   GOWORK=off when a Go workspace is active
-  Explicitly include go.mod, go.sum, and required source files
+  Explicitly include go.mod, any existing go.sum, and required source files
   At most 128 selected external Go modules; up to 64 with complete ZIP artifacts
+  Optional --include-go-embed discovers embedded resources offline
+  Workspace limit: 2048 archived files, including virtual go.sum
   Active Go workspaces are unsupported
 
 Example:
