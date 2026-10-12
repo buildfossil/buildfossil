@@ -166,7 +166,7 @@ jobs:
 
           go test -count=1 -v -timeout 8m \
             ./internal/runtime/docker \
-            -run '^(TestSDKOfflineExecRunner|TestSDKOfflineExecCancelAfterCommandStarted)$' \
+            -run '^(TestSDKOfflineExecRunner|TestSDKOfflineExecCancelAfterCommandStarted|TestExecuteInContainerStartFailureE2E)$' \
             | tee "$RUNNER_TEMP/buildfossil-v3-docker.log"
 
           if grep -q -- '--- SKIP:' "$RUNNER_TEMP/buildfossil-v3-docker.log"; then

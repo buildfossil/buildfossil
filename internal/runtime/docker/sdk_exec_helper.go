@@ -134,6 +134,15 @@ func executeInContainer(
 			fmt.Errorf("docker SDK: exec still running after stream EOF")
 	}
 
+	if inspected.PID <= 0 {
+		return 0, stdout.Bytes(), stderr.Bytes(),
+			fmt.Errorf(
+				"docker SDK: exec did not report a started process (pid=%d, exit=%d)",
+				inspected.PID,
+				inspected.ExitCode,
+			)
+	}
+
 	if stdout.truncated || stderr.truncated {
 		return 0, stdout.Bytes(), stderr.Bytes(),
 			fmt.Errorf(
