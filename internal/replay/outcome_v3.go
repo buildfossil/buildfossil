@@ -1,9 +1,10 @@
 package replay
 
-// compareFailureV3 conservatively treats replay exit code 137 as
-// inconclusive. Docker can return 137 when an exec process is killed,
-// including by OOM, without identifying the cause in ExecInspect.
-// This is not an OOM detector.
+// compareFailureV3 conservatively treats matching exit codes 129-159
+// as inconclusive. These codes may represent signal termination under
+// the common 128+signal convention, but Docker ExecInspect does not
+// distinguish signals from explicit process exit codes.
+// This is a heuristic, not a signal or OOM detector.
 func compareFailureV3(
 	originalExit int,
 	originalStderr string,
@@ -24,7 +25,7 @@ func compareFailureV3(
 		return outcome, err
 	}
 
-	if outcome == OutcomeReproduced && replayExit == 137 {
+	if outcome == OutcomeReproduced && replayExit >= 129 && replayExit <= 159 {
 		return OutcomeInconclusive, nil
 	}
 
