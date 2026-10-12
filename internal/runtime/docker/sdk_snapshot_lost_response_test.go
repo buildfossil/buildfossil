@@ -21,6 +21,8 @@ func TestSnapshotPreparationContainerLostCreateResponse(t *testing.T) {
 	containerRemoved := false
 	containerInspected := false
 	volumeRemoved := false
+	volumeInspected := false
+	var volumeLabels map[string]string
 	containerName := ""
 	ownershipToken := ""
 
@@ -34,9 +36,29 @@ func TestSnapshotPreparationContainerLostCreateResponse(t *testing.T) {
 
 		switch {
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/volumes/create"):
+			var request struct {
+				Name   string            `json:"Name"`
+				Labels map[string]string `json:"Labels"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+				t.Errorf("decode volume create: %v", err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			if request.Name != volumeName {
+				t.Errorf("unexpected volume name: %q", request.Name)
+			}
+			volumeLabels = request.Labels
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusCreated)
 			_, _ = fmt.Fprintf(w, `{"Name":%q,"Driver":"local"}`, volumeName)
+
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/volumes/"+volumeName):
+			volumeInspected = true
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"Name": volumeName, "Driver": "local", "Labels": volumeLabels,
+			})
 
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/containers/create"):
 			containerExists = true
@@ -96,6 +118,11 @@ func TestSnapshotPreparationContainerLostCreateResponse(t *testing.T) {
 			w.WriteHeader(http.StatusNoContent)
 
 		case r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/volumes/"):
+			if !volumeInspected ||
+				!strings.HasSuffix(r.URL.Path, "/volumes/"+volumeName) {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
 			volumeRemoved = true
 			w.WriteHeader(http.StatusNoContent)
 

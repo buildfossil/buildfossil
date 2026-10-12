@@ -22,10 +22,12 @@ const snapshotCleanupTimeout = 15 * time.Second
 //
 // Not safe for concurrent use.
 type SnapshotVolumes struct {
-	client      *client.Client
-	Workspace   string
-	ModuleCache string
-	containers  []string
+	client       *client.Client
+	Workspace    string
+	ModuleCache  string
+	containers   []string
+	volumeTokens map[string]string
+	volumeKinds  map[string]string
 }
 
 func newSnapshotVolumeName() (string, error) {
@@ -123,7 +125,9 @@ func createSnapshotVolumesFromReadersWithNameGenerator(
 		return nil, err
 	}
 	volumes := &SnapshotVolumes{
-		client: dockerClient,
+		client:       dockerClient,
+		volumeTokens: make(map[string]string),
+		volumeKinds:  make(map[string]string),
 	}
 
 	// Roll back all created resources if any step fails.
@@ -149,8 +153,15 @@ func createSnapshotVolumesFromReadersWithNameGenerator(
 			return nil, err
 		}
 
-		// Record the generated name before contacting Docker.
-		// The API request may succeed even if its response is lost.
+		token, err := newRunID()
+		if err != nil {
+			return nil, err
+		}
+
+		// Record identity before contacting Docker: creation may succeed
+		// even if its HTTP response is lost.
+		volumes.volumeTokens[name] = token
+		volumes.volumeKinds[name] = snapshot.kind
 		if snapshot.kind == "workspace" {
 			volumes.Workspace = name
 		} else {
@@ -162,8 +173,9 @@ func createSnapshotVolumesFromReadersWithNameGenerator(
 			client.VolumeCreateOptions{
 				Name: name,
 				Labels: map[string]string{
-					"org.buildfossil.component": "snapshot",
-					"org.buildfossil.kind":      snapshot.kind,
+					"org.buildfossil.component":       "snapshot",
+					"org.buildfossil.kind":            snapshot.kind,
+					"org.buildfossil.ownership-token": token,
 				},
 			},
 		)
@@ -315,11 +327,7 @@ func (v *SnapshotVolumes) Close() error {
 			snapshotCleanupTimeout,
 		)
 
-		_, err := v.client.VolumeRemove(
-			cleanupCtx,
-			name,
-			client.VolumeRemoveOptions{},
-		)
+		err := v.removeOwnedVolume(cleanupCtx, name)
 		cancel()
 
 		if err != nil {
@@ -333,6 +341,8 @@ func (v *SnapshotVolumes) Close() error {
 			continue
 		}
 
+		delete(v.volumeTokens, name)
+		delete(v.volumeKinds, name)
 		if name == v.Workspace {
 			v.Workspace = ""
 		}
@@ -342,6 +352,44 @@ func (v *SnapshotVolumes) Close() error {
 	}
 
 	return result
+}
+
+// removeOwnedVolume never deletes a volume without verifying ownership.
+// This also protects rollback after an ambiguous VolumeCreate response.
+func (v *SnapshotVolumes) removeOwnedVolume(
+	ctx context.Context,
+	name string,
+) error {
+	token := v.volumeTokens[name]
+	kind := v.volumeKinds[name]
+	if token == "" || kind == "" {
+		return fmt.Errorf("docker SDK: unverified snapshot volume ownership: %s", name)
+	}
+
+	inspected, err := v.client.VolumeInspect(
+		ctx, name, client.VolumeInspectOptions{},
+	)
+	if errdefs.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("docker SDK: inspect snapshot volume %s: %w", name, err)
+	}
+
+	if inspected.Volume.Name != name ||
+		inspected.Volume.Labels["org.buildfossil.component"] != "snapshot" ||
+		inspected.Volume.Labels["org.buildfossil.kind"] != kind ||
+		inspected.Volume.Labels["org.buildfossil.ownership-token"] != token {
+		return fmt.Errorf("docker SDK: unverified snapshot volume ownership: %s", name)
+	}
+
+	_, err = v.client.VolumeRemove(
+		ctx, name, client.VolumeRemoveOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("docker SDK: remove owned snapshot volume %s: %w", name, err)
+	}
+	return nil
 }
 
 // cleanupUnknownPreparationContainer handles an ambiguous ContainerCreate result.

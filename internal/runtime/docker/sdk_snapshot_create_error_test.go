@@ -3,6 +3,7 @@ package docker
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +18,9 @@ import (
 func TestSnapshotVolumeContainerCreateNotFound(t *testing.T) {
 	var mu sync.Mutex
 	var requests []string
+	var volumeName string
+	var volumeLabels map[string]string
+	var volumeInspected bool
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
@@ -25,9 +29,37 @@ func TestSnapshotVolumeContainerCreateNotFound(t *testing.T) {
 
 		switch {
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/volumes/create"):
+			var request struct {
+				Name   string            `json:"Name"`
+				Labels map[string]string `json:"Labels"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+				t.Errorf("decode volume create: %v", err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			mu.Lock()
+			volumeName = request.Name
+			volumeLabels = request.Labels
+			mu.Unlock()
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusCreated)
-			_, _ = io.WriteString(w, `{"Name":"test-snapshot-volume","Driver":"local"}`)
+			_, _ = fmt.Fprintf(w, `{"Name":%q,"Driver":"local"}`, request.Name)
+
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/volumes/"):
+			mu.Lock()
+			name := volumeName
+			labels := volumeLabels
+			volumeInspected = true
+			mu.Unlock()
+			if name == "" || !strings.HasSuffix(r.URL.Path, "/volumes/"+name) {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"Name": name, "Driver": "local", "Labels": labels,
+			})
 
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/containers/create"):
 			w.Header().Set("Content-Type", "application/json")
@@ -35,6 +67,14 @@ func TestSnapshotVolumeContainerCreateNotFound(t *testing.T) {
 			_, _ = io.WriteString(w, `{"message":"No such image: test-image"}`)
 
 		case r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/volumes/"):
+			mu.Lock()
+			allowed := volumeInspected && volumeName != "" &&
+				strings.HasSuffix(r.URL.Path, "/volumes/"+volumeName)
+			mu.Unlock()
+			if !allowed {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
 			w.WriteHeader(http.StatusNoContent)
 
 		default:
