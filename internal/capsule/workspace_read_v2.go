@@ -38,6 +38,7 @@ func readWorkspaceFilesWithLimit(root string, paths []string, maxFiles int) ([]W
 
 	files := make([]WorkspaceFile, 0, len(paths))
 	seen := make(map[string]struct{}, len(paths))
+	parentDirs := make(map[string]struct{})
 	var totalSize int64
 
 	for _, name := range paths {
@@ -48,18 +49,17 @@ func readWorkspaceFilesWithLimit(root string, paths []string, maxFiles int) ([]W
 		if _, exists := seen[name]; exists {
 			return nil, fmt.Errorf("capsule: duplicate workspace path: %q", name)
 		}
-		seen[name] = struct{}{}
+		if _, exists := parentDirs[name]; exists {
+			return nil, fmt.Errorf("capsule: file/directory path conflict: %q", name)
+		}
 
 		for parent := path.Dir(name); parent != "."; parent = path.Dir(parent) {
 			if _, exists := seen[parent]; exists {
 				return nil, fmt.Errorf("capsule: file/directory path conflict: %q", parent)
 			}
+			parentDirs[parent] = struct{}{}
 		}
-		for existing := range seen {
-			if existing != name && strings.HasPrefix(existing, name+"/") {
-				return nil, fmt.Errorf("capsule: file/directory path conflict: %q", name)
-			}
-		}
+		seen[name] = struct{}{}
 
 		current := root
 		parts := strings.Split(name, "/")

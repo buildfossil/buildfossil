@@ -419,7 +419,7 @@ The current schema-v3 implementation:
   module cache and verified against `/go.mod` entries in `go.sum`.
 - Does not support arbitrary-sized dependency graphs.
 - Does not support general-purpose CI job capture.
-- Requires workspace files to be explicitly included (maximum 256 files in schema v3).
+- Requires workspace files to be explicitly included (maximum 2048 files in the current development schema-v3 implementation; the published v0.1.0-alpha.3 release supports 256). Files required by `go:embed` must also be explicitly included.
 - The schema-v2 workspace limit remains 64 files.
 - Does not create a complete filesystem or process snapshot.
 - Does not guarantee reproduction across all host and target platforms.

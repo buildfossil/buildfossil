@@ -15,19 +15,24 @@ const (
 const MaxWorkspaceV2PathBytes = 90
 
 func validateWorkspaceV2(workspace Workspace) error {
-	return validateWorkspaceWithFileLimit(workspace, MaxWorkspaceV2Files)
+	return validateWorkspaceWithFileLimit(workspace, MaxWorkspaceV2Files, false)
 }
 
 func validateWorkspaceV3(workspace Workspace) error {
-	return validateWorkspaceWithFileLimit(workspace, MaxWorkspaceV3Files)
+	return validateWorkspaceWithFileLimit(workspace, MaxWorkspaceV3Files, true)
 }
 
-func validateWorkspaceWithFileLimit(workspace Workspace, maxFiles int) error {
+func validateWorkspaceWithFileLimit(
+	workspace Workspace,
+	maxFiles int,
+	allowUSTAR bool,
+) error {
 	if len(workspace.Files) > maxFiles {
 		return fmt.Errorf("capsule: too many workspace files")
 	}
 
 	seen := make(map[string]struct{}, len(workspace.Files))
+	parentDirs := make(map[string]struct{})
 	var totalSize int64
 
 	for _, file := range workspace.Files {
@@ -38,7 +43,11 @@ func validateWorkspaceWithFileLimit(workspace Workspace, maxFiles int) error {
 			return err
 		}
 
-		if len("workspace/"+file.Path) > 100 {
+		if allowUSTAR {
+			if err := validateWorkspaceUSTARPathV3(file.Path); err != nil {
+				return err
+			}
+		} else if len("workspace/"+file.Path) > 100 {
 			return fmt.Errorf(
 				"capsule: workspace path exceeds canonical TAR limit: %q",
 				file.Path,
@@ -51,9 +60,13 @@ func validateWorkspaceWithFileLimit(workspace Workspace, maxFiles int) error {
 				file.Path,
 			)
 		}
-		seen[file.Path] = struct{}{}
+		if _, exists := parentDirs[file.Path]; exists {
+			return fmt.Errorf(
+				"capsule: file/directory path conflict: %q",
+				file.Path,
+			)
+		}
 
-		// A regular file cannot also be an ancestor directory.
 		for parent := path.Dir(file.Path); parent != "."; parent = path.Dir(parent) {
 			if _, exists := seen[parent]; exists {
 				return fmt.Errorf(
@@ -61,20 +74,10 @@ func validateWorkspaceWithFileLimit(workspace Workspace, maxFiles int) error {
 					parent,
 				)
 			}
+			parentDirs[parent] = struct{}{}
 		}
 
-		for existing := range seen {
-			if existing == file.Path {
-				continue
-			}
-
-			if strings.HasPrefix(existing, file.Path+"/") {
-				return fmt.Errorf(
-					"capsule: file/directory path conflict: %q",
-					file.Path,
-				)
-			}
-		}
+		seen[file.Path] = struct{}{}
 
 		if file.Size < 0 || file.Size > MaxWorkspaceFileSize {
 			return fmt.Errorf(

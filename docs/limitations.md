@@ -2,8 +2,9 @@
 
 ## Status
 
-This document describes the schema-v3 implementation shipped in
-BuildFossil v0.1.0-alpha.3.
+This document describes the current schema-v3 development implementation.
+The published v0.1.0-alpha.3 release has lower workspace capacity;
+unreleased changes described here are not available in that binary.
 
 BuildFossil is not production-ready. Supported scenarios are intentionally narrow, and successful reproduction is not guaranteed outside the tested configurations.
 
@@ -36,7 +37,8 @@ The schema-v3 implementation enforces:
 - Maximum 128 additional graph-only `.mod` files, 1 MiB combined.
 - Maximum 64 MiB combined module artifact data.
 - Maximum 96 MiB total schema-v3 `.bfc` archive size.
-- Maximum 256 explicitly included workspace files for schema v3.
+- Maximum 2048 explicitly included workspace files for the current development schema v3 (256 in the published v0.1.0-alpha.3 release).
+- Schema-v3 workspace paths must be representable in USTAR TAR headers without requiring PAX path extensions.
 - Schema v2 retains its 64-file workspace limit.
 - Maximum 10 MiB per workspace file.
 - Maximum 14 MiB combined workspace file data.
@@ -140,6 +142,8 @@ Dependency content is verified, but verification does not establish whether the 
 ## Workspace Restrictions
 
 The user selects files through `--include`.
+
+Files referenced by Go `//go:embed` directives must also be included explicitly. BuildFossil does not currently discover and include those resources automatically.
 
 The resulting capsule does not automatically contain the entire repository or working environment.
 
