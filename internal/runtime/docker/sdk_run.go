@@ -287,9 +287,11 @@ func runWithSDKOptionsTargetModules(
 		}
 	}
 
-	created, err := dockerClient.ContainerCreate(
+	created, err := createStandardExecutionContainer(
 		execCtx,
+		dockerClient,
 		createOptions,
+		runID,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("docker SDK: create container: %w", err)
@@ -418,4 +420,37 @@ func runWithSDKOptionsTargetModules(
 	}
 
 	return exitCode, nil
+}
+
+// createStandardExecutionContainer identifies the execution container before
+// contacting Docker so ambiguous creation responses can be cleaned up safely.
+func createStandardExecutionContainer(
+	ctx context.Context,
+	dockerClient *client.Client,
+	options client.ContainerCreateOptions,
+	runID string,
+) (client.ContainerCreateResult, error) {
+	name := "buildfossil-replay-exec-" + runID
+	options.Name = name
+	options.Config.Labels["org.buildfossil.ownership-token"] = runID
+
+	created, err := dockerClient.ContainerCreate(ctx, options)
+	if err != nil {
+		cleanupErr := cleanupUnknownContainer(
+			dockerClient,
+			name,
+			runID,
+			"standard execution",
+			client.ContainerRemoveOptions{
+				Force:         true,
+				RemoveVolumes: true,
+			},
+		)
+		return client.ContainerCreateResult{}, errors.Join(
+			err,
+			cleanupErr,
+		)
+	}
+
+	return created, nil
 }
