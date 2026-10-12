@@ -10,6 +10,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/containerd/errdefs"
 	"github.com/moby/moby/api/types/mount"
 	"github.com/moby/moby/client"
 )
@@ -196,11 +197,26 @@ func createSnapshotVolumesFromReadersWithNameGenerator(
 			},
 		}
 
+		ownershipToken, err := newRunID()
+		if err != nil {
+			return nil, err
+		}
+
+		containerName := "buildfossil-snapshot-prep-" + ownershipToken
+		options.Name = containerName
+		options.Config.Labels["org.buildfossil.ownership-token"] = ownershipToken
+
 		created, err := dockerClient.ContainerCreate(ctx, options)
 		if err != nil {
-			return nil, fmt.Errorf(
-				"docker SDK: create %s preparation container: %w",
-				snapshot.kind, err,
+			cleanupErr := cleanupUnknownPreparationContainer(
+				dockerClient, containerName, ownershipToken,
+			)
+			return nil, errors.Join(
+				fmt.Errorf(
+					"docker SDK: create %s preparation container: %w",
+					snapshot.kind, err,
+				),
+				cleanupErr,
 			)
 		}
 
@@ -326,4 +342,54 @@ func (v *SnapshotVolumes) Close() error {
 	}
 
 	return result
+}
+
+// cleanupUnknownPreparationContainer handles an ambiguous ContainerCreate result.
+// Never remove a container unless its ownership token matches the attempted create.
+func cleanupUnknownPreparationContainer(
+	dockerClient *client.Client,
+	name string,
+	token string,
+) error {
+	ctx, cancel := context.WithTimeout(
+		context.Background(), snapshotCleanupTimeout,
+	)
+	defer cancel()
+
+	inspected, err := dockerClient.ContainerInspect(
+		ctx, name, client.ContainerInspectOptions{},
+	)
+	if errdefs.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf(
+			"docker SDK: inspect uncertain preparation container %s: %w",
+			name, err,
+		)
+	}
+
+	if inspected.Container.Config == nil ||
+		inspected.Container.Name != "/"+name ||
+		inspected.Container.Config.Labels["org.buildfossil.component"] != "replay" ||
+		inspected.Container.Config.Labels["org.buildfossil.ownership-token"] != token ||
+		inspected.Container.ID == "" {
+		return fmt.Errorf(
+			"docker SDK: uncertain preparation container %s has unverified ownership",
+			name,
+		)
+	}
+
+	_, err = dockerClient.ContainerRemove(
+		ctx,
+		inspected.Container.ID,
+		client.ContainerRemoveOptions{Force: true},
+	)
+	if err != nil {
+		return fmt.Errorf(
+			"docker SDK: remove uncertain preparation container %s: %w",
+			name, err,
+		)
+	}
+	return nil
 }
