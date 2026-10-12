@@ -141,7 +141,7 @@ func RunV3WithOptions(
 		return result, fmt.Errorf("replay: offline Docker execution: %w", err)
 	}
 
-	outcome, err := CompareFailure(
+	outcome, err := compareFailureV3(
 		verified.Manifest.Execution.ExitCode,
 		verified.Manifest.Execution.Stderr,
 		verified.Manifest.Execution.StderrTruncated,
