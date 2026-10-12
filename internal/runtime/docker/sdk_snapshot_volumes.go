@@ -289,6 +289,11 @@ func (v *SnapshotVolumes) removePreparationContainers() error {
 		)
 		cancel()
 
+		// The container may already have been removed after an
+		// ambiguous Docker API response. Its recorded ID is then gone.
+		if errdefs.IsNotFound(err) {
+			continue
+		}
 		if err != nil {
 			result = errors.Join(
 				result,
@@ -313,6 +318,11 @@ func (v *SnapshotVolumes) Close() error {
 	}
 
 	result := v.removePreparationContainers()
+	if result != nil {
+		// Do not remove snapshot volumes while preparation containers
+		// may still reference them. Preserve state for a later Close.
+		return result
+	}
 
 	for _, name := range []string{
 		v.ModuleCache,
