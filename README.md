@@ -205,6 +205,8 @@ Replay memory:      1 GiB
 Only replay capsules from trusted sources. Replay executes
 the command recorded inside the capsule.
 
+A maintainer-operated test of this public Quick Start is documented in the [alpha.3 Quick Start validation report](docs/alpha3-quickstart-validation.md). This is not independent external-user validation.
+
 ## Understanding Replay Results
 
 Make the `.bfc` capsule available on a machine with a supported Docker environment.
