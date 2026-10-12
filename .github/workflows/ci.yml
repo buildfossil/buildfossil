@@ -204,9 +204,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          go test -count=1 -v -timeout 8m \
+          go test -count=1 -v -timeout 12m \
             ./internal/runtime/docker \
-            -run '^(TestSnapshotVolumes.*|TestSnapshotExecutorEndToEnd|TestSnapshotOfflineGoBuild)$' \
+            -run '^(TestSnapshotVolumes.*|TestSnapshotReadersDocker.*|TestSnapshotExecutorEndToEnd|TestSnapshotOfflineGoBuild)$' \
             | tee "$RUNNER_TEMP/buildfossil-v3-snapshot.log"
 
           if grep -q -- '--- SKIP:' "$RUNNER_TEMP/buildfossil-v3-snapshot.log"; then
