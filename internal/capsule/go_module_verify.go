@@ -128,26 +128,9 @@ func verifyGoModuleArtifactsAtIndexV3(
 		return err
 	}
 
-	identity := module.Version{
-		Path:    mod.Path,
-		Version: mod.Version,
-	}
-
-	if _, err := modzip.CheckZip(identity, zipPath); err != nil {
-		return fmt.Errorf("capsule: invalid Go module ZIP: %w", err)
-	}
-
-	if err := verifyGoModuleZipContents(zipPath); err != nil {
-		return err
-	}
-
-	if err := verifyEmbeddedGoMod(zipPath, mod, modData); err != nil {
-		return err
-	}
-
-	zipHash, err := dirhash.HashZip(zipPath, dirhash.Hash1)
+	zipHash, err := verifyGoModuleZipFileV3(zipPath, mod, modData)
 	if err != nil {
-		return fmt.Errorf("capsule: hash Go module ZIP: %w", err)
+		return err
 	}
 
 	modHash, err := dirhash.Hash1(
@@ -180,6 +163,39 @@ func verifyGoModuleArtifactsAtIndexV3(
 	}
 
 	return nil
+}
+
+// verifyGoModuleZipFileV3 validates a module ZIP from a local file.
+// The caller must provide a stable, trusted file for the duration
+// of verification.
+func verifyGoModuleZipFileV3(
+	zipPath string,
+	mod GoModuleV3,
+	modData []byte,
+) (string, error) {
+	identity := module.Version{
+		Path:    mod.Path,
+		Version: mod.Version,
+	}
+
+	if _, err := modzip.CheckZip(identity, zipPath); err != nil {
+		return "", fmt.Errorf("capsule: invalid Go module ZIP: %w", err)
+	}
+
+	if err := verifyGoModuleZipContents(zipPath); err != nil {
+		return "", err
+	}
+
+	if err := verifyEmbeddedGoMod(zipPath, mod, modData); err != nil {
+		return "", err
+	}
+
+	zipHash, err := dirhash.HashZip(zipPath, dirhash.Hash1)
+	if err != nil {
+		return "", fmt.Errorf("capsule: hash Go module ZIP: %w", err)
+	}
+
+	return zipHash, nil
 }
 
 func verifyEmbeddedGoMod(

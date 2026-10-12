@@ -14,7 +14,7 @@ func TestSnapshotExecutionTmpfsLimitsV3(t *testing.T) {
 	want := map[string]string{
 		"/tmp":        "rw,nosuid,nodev,size=512m,mode=1777",
 		"/gocache":    "rw,nosuid,nodev,size=256m,mode=1777",
-		"/gomodcache": "rw,nosuid,nodev,size=64m,mode=1777",
+		"/gomodcache": "rw,nosuid,nodev,size=256m,mode=1777",
 	}
 
 	host := options.HostConfig

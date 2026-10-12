@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	MaxGoGraphModFilesV3           = 64
+	MaxGoGraphModFilesV3           = 128
 	MaxGoGraphModTotalSizeV3 int64 = 1 << 20
 )
 

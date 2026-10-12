@@ -103,10 +103,10 @@ func TestWriteReadV3EightModulesRoundTrip(t *testing.T) {
 	}
 }
 
-func TestWriteV3SeventeenModulesRejectsWithoutOutput(t *testing.T) {
+func TestWriteV3SixtyFiveModulesRejectsWithoutOutput(t *testing.T) {
 	manifest, files, artifacts := makeEightModuleWorkspaceV3(t)
 
-	for index := 9; index <= 17; index++ {
+	for index := 9; index <= 65; index++ {
 		modulePath := fmt.Sprintf("example.com/module%02d", index)
 		mod, moduleArtifacts, moduleSum := makeIndexedGoModuleFixture(
 			t, index, modulePath,
@@ -131,7 +131,7 @@ func TestWriteV3SeventeenModulesRejectsWithoutOutput(t *testing.T) {
 	err := WriteWorkspaceV3(&output, manifest, files, artifacts)
 
 	if err == nil {
-		t.Fatal("writer accepted seventeen modules")
+		t.Fatal("writer accepted sixty-five modules")
 	}
 	if output.Len() != 0 {
 		t.Fatalf("writer emitted %d bytes before rejection", output.Len())

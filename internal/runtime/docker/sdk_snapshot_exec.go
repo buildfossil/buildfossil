@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +13,8 @@ import (
 	"github.com/moby/moby/api/types/mount"
 	"github.com/moby/moby/client"
 )
+
+const snapshotGoExecutionTimeoutV3 = 300 * time.Second
 
 // RunWithSDKRuntimeSnapshotExec executes offline Go commands
 // using Docker-managed volumes rather than host bind mounts.
@@ -99,6 +102,35 @@ func RunWithSDKRuntimeSnapshotExecSelectiveV3(
 	)
 }
 
+// RunWithSDKRuntimeSnapshotExecSelectiveReadersV3 runs selective
+// offline Go replay using two prevalidated TAR readers.
+// Readers are consumed once and are not closed by this function.
+func RunWithSDKRuntimeSnapshotExecSelectiveReadersV3(
+	ctx context.Context,
+	workspaceTAR io.Reader,
+	moduleTAR io.Reader,
+	argv []string,
+	expected []ExpectedGoModule,
+	materialized []ExpectedGoModule,
+	memoryBytes int64,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+) (int, error) {
+	downloadArgs, err := selectiveGoModuleDownloadArgsV3(
+		expected, materialized,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return runWithSDKRuntimeSnapshotExecSelectiveReaders(
+		ctx, workspaceTAR, moduleTAR, argv,
+		expected, true, memoryBytes, user,
+		stdout, stderr, runtime, downloadArgs, true,
+	)
+}
+
 func runWithSDKRuntimeSnapshotExec(
 	ctx context.Context,
 	workspaceTAR []byte,
@@ -122,6 +154,33 @@ func runWithSDKRuntimeSnapshotExecSelective(
 	ctx context.Context,
 	workspaceTAR []byte,
 	moduleTAR []byte,
+	argv []string,
+	expected []ExpectedGoModule,
+	verifyGraph bool,
+	memoryBytes int64,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+	downloadArgs []string,
+	selective bool,
+) (int, error) {
+	if len(workspaceTAR) == 0 || len(moduleTAR) == 0 {
+		return 0, fmt.Errorf("docker SDK: empty snapshot TAR")
+	}
+
+	return runWithSDKRuntimeSnapshotExecSelectiveReaders(
+		ctx,
+		bytes.NewReader(workspaceTAR),
+		bytes.NewReader(moduleTAR),
+		argv, expected, verifyGraph, memoryBytes, user,
+		stdout, stderr, runtime, downloadArgs, selective,
+	)
+}
+
+func runWithSDKRuntimeSnapshotExecSelectiveReaders(
+	ctx context.Context,
+	workspaceTAR io.Reader,
+	moduleTAR io.Reader,
 	argv []string,
 	expected []ExpectedGoModule,
 	verifyGraph bool,
@@ -160,8 +219,8 @@ func runWithSDKRuntimeSnapshotExecSelective(
 		return 0, fmt.Errorf("docker SDK: invalid GID")
 	}
 
-	if len(workspaceTAR) == 0 || len(moduleTAR) == 0 {
-		return 0, fmt.Errorf("docker SDK: empty snapshot TAR")
+	if workspaceTAR == nil || moduleTAR == nil {
+		return 0, fmt.Errorf("docker SDK: nil snapshot reader")
 	}
 
 	if err := ctx.Err(); err != nil {
@@ -200,11 +259,11 @@ func runWithSDKRuntimeSnapshotExecSelective(
 
 	execCtx, cancelExec := context.WithTimeout(
 		ctx,
-		goModulesExecutionTimeout,
+		snapshotGoExecutionTimeoutV3,
 	)
 	defer cancelExec()
 
-	volumes, err := CreateSnapshotVolumes(
+	volumes, err := CreateSnapshotVolumesFromReaders(
 		execCtx,
 		dockerClient,
 		image,
@@ -365,7 +424,7 @@ func newSnapshotExecutionOptions(
 	options.HostConfig.Tmpfs = map[string]string{
 		"/tmp":        "rw,nosuid,nodev,size=512m,mode=1777",
 		"/gocache":    "rw,nosuid,nodev,size=256m,mode=1777",
-		"/gomodcache": "rw,nosuid,nodev,size=64m,mode=1777",
+		"/gomodcache": "rw,nosuid,nodev,size=256m,mode=1777",
 	}
 
 	// Replace the inherited bind mount, never append to it.

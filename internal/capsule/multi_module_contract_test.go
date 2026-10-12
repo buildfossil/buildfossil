@@ -90,8 +90,8 @@ func TestMultiModuleV3AcceptsEightModules(t *testing.T) {
 	}
 }
 
-func TestMultiModuleV3RejectsSeventeenModules(t *testing.T) {
-	modules := make([]GoModuleV3, 17)
+func TestMultiModuleV3RejectsSixtyFiveModules(t *testing.T) {
+	modules := make([]GoModuleV3, 65)
 	for i := range modules {
 		modules[i] = multiModuleFixture(
 			i+1,
@@ -100,7 +100,7 @@ func TestMultiModuleV3RejectsSeventeenModules(t *testing.T) {
 	}
 
 	if err := ValidateGoModulesV3(modules); err == nil {
-		t.Fatal("seventeen modules accepted")
+		t.Fatal("sixty-five modules accepted")
 	}
 }
 
@@ -110,7 +110,7 @@ func TestMultiModuleV3RejectsTotalSizeOverflow(t *testing.T) {
 		multiModuleFixture(2, "example.com/b"),
 	}
 
-	modules[0].Artifacts[0].Size = 16 << 20
+	modules[0].Artifacts[0].Size = MaxGoModuleTotalSizeV3
 
 	if err := ValidateGoModulesV3(modules); err == nil {
 		t.Fatal("oversized module artifacts accepted")

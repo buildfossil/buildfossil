@@ -23,7 +23,7 @@ func moduleGraphFixture(count int) []byte {
 }
 
 func TestGoModuleGraphCapacityBoundaries(t *testing.T) {
-	for _, count := range []int{0, 1, 8, 9, 16, 17, 64, 65} {
+	for _, count := range []int{0, 1, 8, 9, 16, 17, 64, 65, 128, 129} {
 		t.Run(fmt.Sprintf("modules_%d", count), func(t *testing.T) {
 			modules, err := ParseGoModuleGraphV3(
 				moduleGraphFixture(count),
@@ -47,7 +47,7 @@ func TestGoModuleGraphCapacityBoundaries(t *testing.T) {
 }
 
 func BenchmarkParseGoModuleGraphV3(b *testing.B) {
-	for _, count := range []int{0, 1, 8, 9, 16, 17, 64, 65} {
+	for _, count := range []int{0, 1, 8, 9, 16, 17, 64, 65, 128, 129} {
 		b.Run(fmt.Sprintf("modules_%d", count), func(b *testing.B) {
 			input := moduleGraphFixture(count)
 			b.ReportAllocs()
