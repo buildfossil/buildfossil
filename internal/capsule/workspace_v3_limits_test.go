@@ -29,7 +29,9 @@ func TestWorkspaceReadSchemaFileLimits(t *testing.T) {
 		{"v2 rejects 65", 65, ReadWorkspaceFilesV2, true},
 		{"v3 accepts 65", 65, ReadWorkspaceFilesV3, false},
 		{"v3 accepts 256", 256, ReadWorkspaceFilesV3, false},
-		{"v3 rejects 257", 257, ReadWorkspaceFilesV3, true},
+		{"v3 accepts 257", 257, ReadWorkspaceFilesV3, false},
+		{"v3 accepts 2048", 2048, ReadWorkspaceFilesV3, false},
+		{"v3 rejects 2049", 2049, ReadWorkspaceFilesV3, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			files, err := tc.read(root, paths[:tc.count])

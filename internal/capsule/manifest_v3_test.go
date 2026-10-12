@@ -167,7 +167,9 @@ func TestManifestV3WorkspaceFileLimits(t *testing.T) {
 		{"64 files", 64, false},
 		{"65 files", 65, false},
 		{"256 files", 256, false},
-		{"257 files", 257, true},
+		{"257 files", 257, false},
+		{"2048 files", 2048, false},
+		{"2049 files", 2049, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := validManifestV3()

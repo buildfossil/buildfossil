@@ -1,5 +1,51 @@
 # Real-World Go Compatibility — Development Validation
 
+## Unreleased Large Workspace v3 Validation — BurntSushi/toml
+
+This validation was performed locally on the development branch
+`feat/real-world-go-compatibility` in October 2026. It does not
+describe the published v0.1.0-alpha.3 release.
+
+The upstream dependency-free Go project `BurntSushi/toml` was checked
+out at commit `d733fc535e4a9f3c454e421a87b90ade5d49bf31`.
+The upstream checkout remained unchanged. A separate fixture copy
+introduced an intentional undefined Go symbol.
+
+The tested development implementation increases the schema-v3
+workspace file limit from 256 to 2048 and accepts workspace paths
+representable by USTAR without PAX extension records. Schema v2
+retains its 64-file limit.
+
+Observed local results:
+
+- Explicitly included workspace files: **1081**.
+- Embedded test resources included explicitly: **1049**.
+- Original compilation failure:
+  `undefined: buildfossilIntentionallyUndefined`.
+- Original exit code: `1`.
+- Schema-v3 capsule size: **1568768 bytes**.
+- Replay target: pinned Linux AMD64 Go runtime in Docker.
+- Replay networking: disabled.
+- Replay memory setting: `1g`.
+- Replay exit code: `1`.
+- Replay outcome: `reproduced`.
+- Replay CLI exit code: `0`.
+
+The first incomplete capture omitted resources required by
+`go:embed` and produced `different_failure`. Explicitly including
+the required files resolved that specific discrepancy.
+
+The development branch also passed Go unit/integration tests,
+race-detector tests, static analysis, path-conflict and symlink
+regressions, and ordinary and store-backed USTAR round-trip tests.
+
+This establishes reproduction of one controlled compiler failure
+in one pinned third-party project. It does not establish universal
+Go compatibility, automatic `go:embed` discovery, safe execution
+of untrusted capsules, or release availability.
+
+---
+
 ## BuildFossil v0.1.0-alpha.3 Validation
 
 The larger-project implementation was integrated through

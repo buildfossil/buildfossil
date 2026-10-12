@@ -153,7 +153,7 @@ func TestLargeWorkspaceV3RoundTripAndStaging(t *testing.T) {
 	}
 }
 
-func TestLargeWorkspaceV3Rejects257Files(t *testing.T) {
+func TestLargeWorkspaceV3RejectsTooManyFiles(t *testing.T) {
 	manifest, files := largeWorkspaceV3Fixture()
 
 	files = append(files, WorkspaceFile{
@@ -164,10 +164,10 @@ func TestLargeWorkspaceV3Rejects257Files(t *testing.T) {
 
 	var output bytes.Buffer
 	if err := WriteWorkspaceV3(&output, manifest, files, nil); err == nil {
-		t.Fatal("v3 writer accepted 257 workspace files")
+		t.Fatal("v3 writer accepted workspace file count above v3 limit")
 	}
 
 	if output.Len() != 0 {
-		t.Fatal("v3 writer wrote bytes after rejecting 257 files")
+		t.Fatal("v3 writer wrote bytes after rejecting too many files")
 	}
 }

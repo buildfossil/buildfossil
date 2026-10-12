@@ -115,6 +115,6 @@ func TestLargeWorkspaceV3DockerE2E(t *testing.T) {
 			stderr.String())
 	}
 
-	t.Logf("256-FILE DOCKER BUILD: exit=%d", code)
+	t.Logf("LARGE-WORKSPACE DOCKER BUILD: exit=%d", code)
 	t.Logf("Compiler stderr:\n%s", stderr.String())
 }
