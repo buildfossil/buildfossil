@@ -21,6 +21,18 @@ func captureCommandV3(
 	includes []string,
 	output string,
 ) int {
+	return captureCommandV3WithEmbed(
+		argv, workspaceRoot, includes, output, false,
+	)
+}
+
+func captureCommandV3WithEmbed(
+	argv []string,
+	workspaceRoot string,
+	includes []string,
+	output string,
+	includeGoEmbed bool,
+) int {
 	if len(argv) == 0 || len(includes) == 0 {
 		fmt.Fprintln(os.Stderr,
 			"buildfossil: v3 requires a command and --include files")
@@ -63,6 +75,85 @@ func captureCommandV3(
 		fmt.Fprintf(os.Stderr,
 			"buildfossil: capture output: %v\n", err)
 		return 125
+	}
+
+	if includeGoEmbed {
+		cacheCommand := exec.Command("go", "env", "GOMODCACHE")
+		cacheCommand.Dir = workspaceRoot
+
+		cacheOutput, err := cacheCommand.Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr,
+				"buildfossil: resolve Go module cache: %v\n", err)
+			return 125
+		}
+
+		moduleCacheRoot := strings.TrimSpace(string(cacheOutput))
+		if moduleCacheRoot == "" {
+			fmt.Fprintln(os.Stderr,
+				"buildfossil: empty Go module cache")
+			return 125
+		}
+
+		discovered, err := capsule.DiscoverGoEmbedFilesV3(
+			workspaceRoot, moduleCacheRoot, goBuildEnv,
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr,
+				"buildfossil: discover Go embedded files: %v\n", err)
+			return 125
+		}
+
+		seen := make(map[string]struct{}, len(includes)+len(discovered))
+		merged := make([]string, 0, len(includes)+len(discovered))
+
+		for _, name := range includes {
+			if _, exists := seen[name]; exists {
+				fmt.Fprintf(os.Stderr,
+					"buildfossil: duplicate explicit include: %q\n", name)
+				return 125
+			}
+			seen[name] = struct{}{}
+			merged = append(merged, name)
+		}
+
+		added := 0
+		for _, name := range discovered {
+			if _, exists := seen[name]; exists {
+				continue
+			}
+			if len(merged) >= capsule.MaxWorkspaceV3Files {
+				fmt.Fprintln(os.Stderr,
+					"buildfossil: workspace file limit exceeded after Go embed discovery")
+				return 125
+			}
+			seen[name] = struct{}{}
+			merged = append(merged, name)
+			added++
+		}
+
+		includes = merged
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: Go embed discovery selected %d additional files\n",
+			added)
+	}
+
+	// Schema v3 counts the virtual empty go.sum as a workspace
+	// file. Reserve its slot before executing the captured command.
+	// A real go.sum must be included explicitly.
+	if len(includes) >= capsule.MaxWorkspaceV3Files {
+		hasIncludedGoSum := false
+		for _, name := range includes {
+			if name == "go.sum" {
+				hasIncludedGoSum = true
+				break
+			}
+		}
+		if !hasIncludedGoSum {
+			fmt.Fprintln(os.Stderr,
+				"buildfossil: workspace file limit leaves no room for virtual go.sum")
+			return 125
+		}
 	}
 
 	beforeFiles, err := capsule.ReadWorkspaceFilesV3(
