@@ -30,11 +30,11 @@ func ReadVerifiedV3(filename string) (VerifiedCapsuleV3, error) {
 	}
 
 	if !info.Mode().IsRegular() ||
-		info.Size() > MaxCapsuleSize {
+		info.Size() > MaxCapsuleSizeV3 {
 		return result, fmt.Errorf("capsule: invalid v3 archive file or size")
 	}
 
-	tr := tar.NewReader(io.LimitReader(f, MaxCapsuleSize+1))
+	tr := tar.NewReader(io.LimitReader(f, MaxCapsuleSizeV3+1))
 
 	header, err := tr.Next()
 	if err != nil {

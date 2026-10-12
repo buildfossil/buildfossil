@@ -233,11 +233,24 @@ func captureCommandV3(
 		return 125
 	}
 
-	goModules, artifacts, err :=
-		capsule.ReadGoModuleArtifactSetForCaptureV3(
+	store, err := capsule.NewArtifactStoreV3(
+		capsule.MaxGoModuleTotalSizeV3 +
+			capsule.MaxGoGraphModTotalSizeV3 +
+			capsule.MaxGoGraphInfoTotalSizeV3,
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: create artifact store: %v\n", err)
+		return 125
+	}
+	defer store.Close()
+
+	goModules, err :=
+		capsule.ReadGoModuleArtifactSetToStoreV3(
 			buildModules,
 			goSum,
 			moduleCacheRoot,
+			store,
 		)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
@@ -290,10 +303,6 @@ func captureCommandV3(
 		return 125
 	}
 
-	for name, data := range graphArtifacts {
-		artifacts[name] = data
-	}
-
 	infoFiles, infoArtifacts, err :=
 		capsule.ReadGoGraphInfoFilesForCaptureV3(
 			selectedModules, goModules, moduleCacheRoot,
@@ -304,9 +313,8 @@ func captureCommandV3(
 		return 125
 	}
 
-	for name, data := range infoArtifacts {
-		artifacts[name] = data
-	}
+	// Graph artifacts are appended to the same disk-backed store
+	// after both metadata categories have been collected.
 
 	selectedManifest := capsule.Manifest{
 		GoModules:         goModules,
@@ -352,16 +360,15 @@ func captureCommandV3(
 		},
 	}
 
-	var archive bytes.Buffer
-
-	if err := capsule.WriteWorkspaceV3(
-		&archive,
+	if err := capsule.AddGoGraphArtifactsToStoreV3(
 		manifest,
-		files,
-		artifacts,
+		goSum,
+		graphArtifacts,
+		infoArtifacts,
+		store,
 	); err != nil {
 		fmt.Fprintf(os.Stderr,
-			"buildfossil: encode v3 capsule: %v\n", err)
+			"buildfossil: store Go graph artifacts: %v\n", err)
 		return 125
 	}
 
@@ -376,15 +383,21 @@ func captureCommandV3(
 		return 125
 	}
 
-	_, writeErr := f.Write(archive.Bytes())
+	writeErr := capsule.WriteWorkspaceFromStoreV3(
+		f,
+		manifest,
+		files,
+		store,
+	)
 	closeErr := f.Close()
 
 	if writeErr != nil || closeErr != nil {
-		_ = os.Remove(output)
+		removeErr := os.Remove(output)
 		fmt.Fprintf(os.Stderr,
-			"buildfossil: write v3 capsule: write=%v close=%v\n",
+			"buildfossil: write v3 capsule: write=%v close=%v remove=%v\n",
 			writeErr,
 			closeErr,
+			removeErr,
 		)
 		return 125
 	}

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/containerd/errdefs"
@@ -55,6 +56,24 @@ func CreateSnapshotVolumes(
 	)
 }
 
+// CreateSnapshotVolumesFromReaders uploads two TAR streams into
+// Docker-managed volumes without materializing them as byte slices.
+//
+// Readers must remain valid until this call returns. They are consumed
+// once and are not closed by this function.
+func CreateSnapshotVolumesFromReaders(
+	ctx context.Context,
+	dockerClient *client.Client,
+	image string,
+	workspaceTAR, moduleTAR io.Reader,
+) (*SnapshotVolumes, error) {
+	return createSnapshotVolumesFromReadersWithNameGenerator(
+		ctx, dockerClient, image,
+		workspaceTAR, moduleTAR,
+		newSnapshotVolumeName,
+	)
+}
+
 // createSnapshotVolumesWithNameGenerator permits deterministic resource
 // identification in tests while production uses random volume names.
 func createSnapshotVolumesWithNameGenerator(
@@ -76,7 +95,33 @@ func createSnapshotVolumesWithNameGenerator(
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	return createSnapshotVolumesFromReadersWithNameGenerator(
+		ctx, dockerClient, image,
+		bytes.NewReader(workspaceTAR),
+		bytes.NewReader(moduleTAR),
+		generateName,
+	)
+}
 
+func createSnapshotVolumesFromReadersWithNameGenerator(
+	ctx context.Context,
+	dockerClient *client.Client,
+	image string,
+	workspaceTAR, moduleTAR io.Reader,
+	generateName func() (string, error),
+) (result *SnapshotVolumes, err error) {
+	if dockerClient == nil {
+		return nil, fmt.Errorf("docker SDK: nil client")
+	}
+	if image == "" {
+		return nil, fmt.Errorf("docker SDK: empty snapshot image")
+	}
+	if workspaceTAR == nil || moduleTAR == nil {
+		return nil, fmt.Errorf("docker SDK: nil snapshot reader")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	volumes := &SnapshotVolumes{
 		client: dockerClient,
 	}
@@ -90,7 +135,7 @@ func createSnapshotVolumesWithNameGenerator(
 
 	for _, snapshot := range []struct {
 		kind string
-		data []byte
+		data io.Reader
 	}{
 		{"workspace", workspaceTAR},
 		{"module-cache", moduleTAR},
@@ -170,7 +215,7 @@ func createSnapshotVolumesWithNameGenerator(
 			created.ID,
 			client.CopyToContainerOptions{
 				DestinationPath: "/snapshot",
-				Content:         bytes.NewReader(snapshot.data),
+				Content:         snapshot.data,
 			},
 		)
 		if err != nil {

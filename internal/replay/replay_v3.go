@@ -2,6 +2,7 @@ package replay
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -19,8 +20,7 @@ func RunV3WithOptions(
 	ctx context.Context,
 	capsulePath string,
 	options Options,
-) (Result, error) {
-	var result Result
+) (result Result, runErr error) {
 
 	if options.MemoryBytes != 0 {
 		switch options.MemoryBytes {
@@ -33,10 +33,21 @@ func RunV3WithOptions(
 		}
 	}
 
-	verified, err := capsule.ReadVerifiedV3(capsulePath)
+	verified, err := capsule.ReadVerifiedToStoreV3(capsulePath)
 	if err != nil {
 		return result, fmt.Errorf("replay: verify v3 capsule: %w", err)
 	}
+
+	// Keep verified artifacts available until snapshot preparation
+	// and Docker execution have completed.
+	defer func() {
+		if err := verified.Close(); err != nil {
+			runErr = errors.Join(
+				runErr,
+				fmt.Errorf("replay: cleanup artifact store: %w", err),
+			)
+		}
+	}()
 
 	if err := validateReplayPlatform(verified.Manifest); err != nil {
 		return result, err
@@ -67,21 +78,15 @@ func RunV3WithOptions(
 
 	containerUser := strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
 
-	workspaceTAR, err := capsule.BuildWorkspaceSnapshotV3(verified)
+	snapshots, err := prepareSnapshotFilesFromStoreV3(verified)
 	if err != nil {
 		return result, fmt.Errorf(
-			"replay: build verified workspace snapshot: %w",
-			err,
+			"replay: prepare verified snapshots: %w", err,
 		)
 	}
-
-	moduleTAR, err := capsule.BuildGoModuleSnapshotV3(verified)
-	if err != nil {
-		return result, fmt.Errorf(
-			"replay: build verified Go module snapshot: %w",
-			err,
-		)
-	}
+	defer func() {
+		runErr = closeSnapshotFilesV3(snapshots, runErr)
+	}()
 
 	selectedModules := capsule.EffectiveGoSelectedModulesV3(
 		verified.Manifest,
@@ -116,10 +121,10 @@ func RunV3WithOptions(
 
 	var stderr boundedOutput
 
-	code, err := docker.RunWithSDKRuntimeSnapshotExecSelectiveV3(
+	code, err := docker.RunWithSDKRuntimeSnapshotExecSelectiveReadersV3(
 		ctx,
-		workspaceTAR,
-		moduleTAR,
+		io.NopCloser(snapshots.workspace),
+		io.NopCloser(snapshots.modules),
 		verified.Manifest.Execution.Argv,
 		expectedModules,
 		materializedModules,

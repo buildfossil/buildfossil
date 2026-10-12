@@ -6,7 +6,7 @@ import (
 	"golang.org/x/mod/module"
 )
 
-const MaxGoSelectedModulesV3 = 64
+const MaxGoSelectedModulesV3 = 128
 
 // ValidateGoSelectedModulesV3 checks a complete, strictly ordered
 // selected Go module build list, independently of ZIP availability.

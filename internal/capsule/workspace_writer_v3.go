@@ -240,7 +240,7 @@ func WriteWorkspaceV3(
 		return fmt.Errorf("capsule: finalize v3 archive: %w", err)
 	}
 
-	if int64(archive.Len()) > MaxCapsuleSize {
+	if int64(archive.Len()) > MaxCapsuleSizeV3 {
 		return fmt.Errorf("capsule: v3 archive exceeds size limit")
 	}
 

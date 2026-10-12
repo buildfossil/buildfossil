@@ -7,13 +7,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"golang.org/x/mod/sumdb/dirhash"
 )
 
-func TestWriteWorkspaceV3RejectsOversizedArchive(t *testing.T) {
+func TestWriteWorkspaceV3AcceptsArchiveAboveLegacyLimit(t *testing.T) {
 	manifest, files, artifacts := makeWorkspaceV3Fixture(t)
 	mod := &manifest.GoModules[0]
 
@@ -107,13 +106,15 @@ func TestWriteWorkspaceV3RejectsOversizedArchive(t *testing.T) {
 	var output bytes.Buffer
 
 	err = WriteWorkspaceV3(&output, manifest, files, artifacts)
-	if err == nil {
-		t.Fatal("oversized archive was accepted")
+	if err != nil {
+		t.Fatalf("valid v3 archive rejected: %v", err)
 	}
-	if !strings.Contains(err.Error(), "archive exceeds size limit") {
-		t.Fatalf("wrong rejection reason: %v", err)
+	if int64(output.Len()) <= MaxCapsuleSize {
+		t.Fatalf("archive size %d did not exceed legacy limit %d",
+			output.Len(), MaxCapsuleSize)
 	}
-	if output.Len() != 0 {
-		t.Fatalf("writer emitted %d bytes before rejection", output.Len())
+	if int64(output.Len()) > MaxCapsuleSizeV3 {
+		t.Fatalf("archive size %d exceeded v3 limit %d",
+			output.Len(), MaxCapsuleSizeV3)
 	}
 }

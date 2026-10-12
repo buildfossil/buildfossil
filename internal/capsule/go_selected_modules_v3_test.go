@@ -108,7 +108,9 @@ func TestGoSelectedModulesV3Boundary(t *testing.T) {
 		{16, false},
 		{17, false},
 		{64, false},
-		{65, true},
+		{65, false},
+		{128, false},
+		{129, true},
 	} {
 		t.Run(fmt.Sprint(tc.count), func(t *testing.T) {
 			m := validManifestV3()

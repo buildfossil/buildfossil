@@ -18,7 +18,8 @@ type ExpectedGoModule struct {
 	Version string
 }
 
-const maxDockerSelectedGoModulesV3 = 64
+// Keep in sync with capsule.MaxGoSelectedModulesV3.
+const maxDockerSelectedGoModulesV3 = 128
 
 type dockerListedGoModule struct {
 	Path    string          `json:"Path"`
