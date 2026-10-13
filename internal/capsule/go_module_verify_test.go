@@ -171,6 +171,30 @@ func TestVerifyGoModuleArtifactsV3RejectsInvalidArtifacts(t *testing.T) {
 			},
 		},
 		{
+			name: "malformed info JSON with valid digest",
+			mutate: func(mod *GoModuleV3, artifacts map[string][]byte, _ *[]byte) {
+				data := []byte(`{"Version":`)
+				artifacts["module-0001.info"] = data
+				mod.Artifacts[2].Size = int64(len(data))
+				mod.Artifacts[2].SHA256 = SHA256(data)
+			},
+		},
+		{
+			name: "malformed go.mod with valid digest",
+			mutate: func(mod *GoModuleV3, artifacts map[string][]byte, _ *[]byte) {
+				data := []byte("module (\n")
+				artifacts["module-0001.mod"] = data
+				mod.Artifacts[1].Size = int64(len(data))
+				mod.Artifacts[1].SHA256 = SHA256(data)
+			},
+		},
+		{
+			name: "incorrect artifact size metadata",
+			mutate: func(mod *GoModuleV3, _ map[string][]byte, _ *[]byte) {
+				mod.Artifacts[2].Size++
+			},
+		},
+		{
 			name: "missing artifact",
 			mutate: func(_ *GoModuleV3, artifacts map[string][]byte, _ *[]byte) {
 				delete(artifacts, "module-0001.info")
