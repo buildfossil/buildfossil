@@ -17,7 +17,7 @@ It includes:
 - Archive structure and metadata validation.
 - SHA-256 verification of captured workspace files and dependency artifacts.
 - Go module ZIP and go.sum checksum verification.
-- Construction of verified in-memory workspace and module-cache snapshots.
+- Construction of workspace and module-cache TAR snapshots from verified workspace bytes and disk-backed dependency artifacts.
 - Docker-managed snapshot volumes mounted read-only for execution.
 - No host workspace bind mounts in the active schema-v3 replay path.
 - Explicit authorization through `--allow-command`.
@@ -49,7 +49,10 @@ The primary assets are:
 BuildFossil crosses several trust boundaries:
 
 1. **Capture host to capsule:** selected files, command metadata, and diagnostic output are serialized into a `.bfc` archive.
-2. **Capsule to replay process:** archive contents are parsed and verified, then serialized into in-memory TAR snapshots.
+2. **Capsule to replay process:** archive contents are parsed and
+   verified; dependency artifacts are held in a private disk-backed
+   store, while workspace bytes remain bounded in memory before TAR
+   snapshot construction.
 3. **Replay process to Docker:** verified snapshots are uploaded into Docker-managed volumes and mounted read-only in the execution container.
 4. **Container to host kernel:** containerized code executes using the host's container runtime and kernel interfaces.
 
@@ -76,7 +79,7 @@ Potentially dangerous inputs include:
 - Go module archives and source files.
 - Recorded execution arguments.
 - Build diagnostics containing attacker-controlled text.
-- Files or directories modified concurrently during staging.
+- Concurrent modification of capture inputs or replay-owned temporary files by processes with sufficient filesystem access.
 
 **Do not replay capsules from unknown or untrusted sources.**
 
@@ -116,7 +119,9 @@ Do not use BuildFossil as a sandbox for hostile code.
 ## Host Filesystem and Replay Snapshots
 
 The active schema-v3 replay path constructs workspace and module-cache
-TAR snapshots from verified capsule data held in memory.
+TAR snapshots from verified workspace bytes in memory and dependency
+artifacts in a private disk-backed store. Prepared TARs are held in
+private temporary files and consumed through open readers.
 
 These snapshots are uploaded into Docker-managed volumes rather than
 being restored into host staging directories for execution.
@@ -198,10 +203,10 @@ No guaranteed response time or formal security support SLA is currently offered.
 
 ## Security Roadmap
 
-Before a public alpha release, the project should address:
+Before a stable release, the project should continue addressing:
 
 - Independent review of archive parsing and extraction.
-- Stronger protection against staging race conditions.
+- Further review of concurrent modifications, snapshot integrity, and filesystem race boundaries.
 - Additional negative and adversarial tests.
 - Resource exhaustion and cancellation edge cases.
 - Dependency graph and artifact validation edge cases.

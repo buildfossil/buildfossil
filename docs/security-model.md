@@ -13,11 +13,14 @@ sandbox for arbitrary hostile workloads.
 ## Scope
 
 Schema-v3 replay supports the exact `go build ./...` command with
-zero to eight selected external Go modules, including transitive dependencies.
+up to 128 selected external Go modules, including transitive dependencies,
+with at most 64 modules requiring full ZIP artifacts.
 
 For dependency-free builds, the manifest declares no external Go modules
-and replay constructs an empty module-cache TAR. For each selected module,
-ZIP, MOD, INFO, and go.sum integrity checks are required.
+and replay constructs an empty module-cache TAR. Full module artifacts
+are verified against the recorded ZIP, MOD, INFO, and go.sum metadata;
+additional graph-only artifacts are validated according to their
+recorded checksums and manifest requirements.
 
 This document describes the path from a verified `.bfc` capsule to
 execution in a restricted Docker container.
@@ -60,9 +63,10 @@ environment or filesystem races between inspection and execution.
 BuildFossil verifies capsule structure, recorded file metadata,
 workspace contents, and dependency artifacts.
 
-Snapshot archives are constructed from previously verified data held
-by the replay process, rather than by rereading mutable host staging
-files.
+Snapshot archives are constructed from verified workspace bytes held
+in replay memory and verified dependency artifacts held in a private
+disk-backed store. The active replay path does not reread mutable host
+staging directories.
 
 The snapshot builders repeat relevant content and checksum validation
 before constructing TAR archives.

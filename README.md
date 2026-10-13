@@ -452,7 +452,7 @@ Do not capture confidential projects or production credentials without carefully
 
 A capsule can pass integrity checks without being trustworthy.
 
-For the schema-v3 staging trust assumptions and remaining TOCTOU concerns, see [Replay Staging Security Model](docs/security-model.md).
+For the schema-v3 replay snapshot trust assumptions, Docker volume boundaries, and remaining security limitations, see [Replay Snapshot Security Model](docs/security-model.md).
 
 ## Known Limitations
 
@@ -491,7 +491,7 @@ The current schema-v3 implementation:
 - Is not approved for executing untrusted capsules.
 - Uses non-atomic workspace consistency checks during capture;
   concurrent changes may still escape detection.
-- Includes filesystem race mitigations for replay staging, but remaining trust-boundary and concurrent-modification risks require further review.
+- Uses verified TAR snapshots and Docker-managed volumes rather than host staging bind mounts in the active replay-v3 path. Concurrent-modification and broader trust-boundary risks still require further review.
 
 Replaying a captured failure can produce a different result or fail when the supported reproducibility assumptions are not met.
 
