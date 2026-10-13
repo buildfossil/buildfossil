@@ -22,6 +22,7 @@ func VerifyGoModuleArtifactSetV3(
 	}
 
 	var totalSize int64
+	var unpackedTotal int64
 
 	for i, mod := range modules {
 		subset := make(map[string][]byte, MaxGoModuleArtifactsV3)
@@ -43,12 +44,13 @@ func VerifyGoModuleArtifactSetV3(
 			subset[metadata.Path] = data
 		}
 
-		if err := verifyGoModuleArtifactsAtIndexV3(
+		unpackedSize, err := verifyGoModuleArtifactsMeasuredAtIndexV3(
 			mod,
 			subset,
 			goSum,
 			i+1,
-		); err != nil {
+		)
+		if err != nil {
 			return fmt.Errorf(
 				"capsule: verify Go module %d (%s): %w",
 				i+1,
@@ -56,6 +58,15 @@ func VerifyGoModuleArtifactSetV3(
 				err,
 			)
 		}
+
+		if unpackedSize < 0 ||
+			unpackedSize > MaxGoModuleUnpackedTotalSizeV3-unpackedTotal {
+			return fmt.Errorf(
+				"capsule: total Go module ZIP unpacked size exceeded",
+			)
+		}
+		unpackedTotal += unpackedSize
+
 	}
 
 	// Count equality plus the validated, unique manifest paths

@@ -12,7 +12,7 @@ const (
 	MaxGoModulesV3                  = 64
 	MaxGoModuleArtifactsV3          = 3
 	MaxGoModuleTotalSizeV3    int64 = 64 << 20
-	MaxGoModuleUnpackedSizeV3 int64 = 16 << 20
+	MaxGoModuleUnpackedSizeV3 int64 = 48 << 20
 )
 
 type GoModuleArtifact struct {

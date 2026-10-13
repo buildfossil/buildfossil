@@ -64,6 +64,7 @@ func verifyGoModuleSubsetFromStoreV3(
 
 	seen := make(map[string]bool)
 	var totalSize int64
+	var unpackedTotal int64
 
 	for index, mod := range modules {
 		for _, metadata := range mod.Artifacts {
@@ -94,14 +95,24 @@ func verifyGoModuleSubsetFromStoreV3(
 			totalSize += record.size
 		}
 
-		if err := verifyGoModuleFromStoreV3(
+		unpackedSize, err := verifyGoModuleFromStoreMeasuredV3(
 			mod, index+1, goSum, store,
-		); err != nil {
+		)
+		if err != nil {
 			return fmt.Errorf(
 				"capsule: verify Go module %d (%s): %w",
 				index+1, mod.Path, err,
 			)
 		}
+
+		if unpackedSize < 0 ||
+			unpackedSize > MaxGoModuleUnpackedTotalSizeV3-unpackedTotal {
+			return fmt.Errorf(
+				"capsule: total Go module ZIP unpacked size exceeded",
+			)
+		}
+		unpackedTotal += unpackedSize
+
 	}
 
 	return nil
