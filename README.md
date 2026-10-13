@@ -311,7 +311,18 @@ For example:
     Outcome:            different_failure
     Difference:         stderr differs
 
-REW does not print the full stderr difference. If the captured or
+By default, REW does not print the full stderr difference.
+
+To inspect the original and replayed stderr, use:
+
+    rew replay --v3 --allow-command --show-stderr failure.bfc
+    rew replay --v3 --allow-command --memory 1g --show-stderr failure.bfc
+
+Diagnostic output is limited to 16 KiB per stderr stream.
+Truncation is explicitly indicated. Stderr may contain sensitive data.
+
+This option does not change the strict comparison, outcome, or exit code.
+ If the captured or
 replayed stderr was truncated, the comparison is `inconclusive` rather than
 claiming a complete mismatch.
 

@@ -12,10 +12,11 @@ import (
 )
 
 type Result struct {
-	OriginalExitCode int
-	ReplayExitCode   int
-	Outcome          Outcome
-	Difference       FailureDifference
+	OriginalExitCode  int
+	ReplayExitCode    int
+	Outcome           Outcome
+	Difference        FailureDifference
+	StderrDiagnostics *StderrDiagnosticsV3
 
 	// GoDependencies contains optional replay environment diagnostics.
 	// It does not affect Outcome.
@@ -25,6 +26,7 @@ type Result struct {
 type Options struct {
 	AllowArbitraryCommand bool
 	DiagnoseDependencies  bool
+	ShowStderr            bool
 
 	// MemoryBytes overrides the schema-v3 execution container
 	// memory limit. Zero uses the default 256 MiB limit.

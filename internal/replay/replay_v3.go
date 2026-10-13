@@ -153,10 +153,21 @@ func RunV3WithOptions(
 		return result, fmt.Errorf("replay: compare failure: %w", err)
 	}
 
+	var diagnostics *StderrDiagnosticsV3
+	if options.ShowStderr {
+		diagnostics = newStderrDiagnosticsV3(
+			verified.Manifest.Execution.Stderr,
+			verified.Manifest.Execution.StderrTruncated,
+			stderr.Bytes(),
+			stderr.Truncated(),
+		)
+	}
+
 	return Result{
-		OriginalExitCode: verified.Manifest.Execution.ExitCode,
-		ReplayExitCode:   code,
-		Outcome:          outcome,
+		StderrDiagnostics: diagnostics,
+		OriginalExitCode:  verified.Manifest.Execution.ExitCode,
+		ReplayExitCode:    code,
+		Outcome:           outcome,
 		Difference: DiagnoseFailureDifferenceV3(
 			outcome,
 			verified.Manifest.Execution.ExitCode,

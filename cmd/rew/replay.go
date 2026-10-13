@@ -27,7 +27,7 @@ func runReplay(args []string) int {
 	const usage = "Usage:\n" +
 		"  rew replay [--allow-command] <capsule.bfc>\n" +
 		"  rew replay --v2 --allow-command [--diagnose-dependencies] <capsule.bfc>\n" +
-		"  rew replay --v3 --allow-command [--memory 256m|512m|1g|2g] <capsule.bfc>"
+		"  rew replay --v3 --allow-command [--memory 256m|512m|1g|2g] [--show-stderr] <capsule.bfc>"
 
 	var capsulePath string
 	var options replay.Options
@@ -79,6 +79,31 @@ func runReplay(args []string) int {
 		options.MemoryBytes = memory
 		capsulePath = args[4]
 
+	case len(args) == 4 &&
+		args[0] == "--v3" &&
+		args[1] == "--allow-command" &&
+		args[2] == "--show-stderr":
+		useV3 = true
+		options.AllowArbitraryCommand = true
+		options.ShowStderr = true
+		capsulePath = args[3]
+
+	case len(args) == 6 &&
+		args[0] == "--v3" &&
+		args[1] == "--allow-command" &&
+		args[2] == "--memory" &&
+		args[4] == "--show-stderr":
+		memory, err := replay.ParseReplayMemoryV3(args[3])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 2
+		}
+		useV3 = true
+		options.AllowArbitraryCommand = true
+		options.MemoryBytes = memory
+		options.ShowStderr = true
+		capsulePath = args[5]
+
 	default:
 		fmt.Fprintln(os.Stderr, usage)
 		return 2
@@ -125,6 +150,19 @@ func runReplay(args []string) int {
 		case replay.DifferenceStderr:
 			fmt.Println("Difference:         stderr differs")
 		}
+	}
+
+	if useV3 && options.ShowStderr && result.StderrDiagnostics != nil {
+		d := result.StderrDiagnostics
+		printReplayStderrDiagnostics(
+			os.Stdout,
+			d.Original,
+			d.OriginalTruncated,
+			d.Replayed,
+			d.ReplayTruncated,
+			d.OriginalDisplayTruncated,
+			d.ReplayDisplayTruncated,
+		)
 	}
 
 	if useV3 && options.MemoryBytes != 0 {
