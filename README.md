@@ -62,11 +62,10 @@ The schema-v3 format is experimental and may change.
 Projects with no external Go dependencies are supported. For these
 projects, the capsule contains no dependency artifacts.
 
-In the published v0.1.0-alpha.3 release, Capture requires explicitly
-including `go.mod`, necessary source files, and any existing `go.sum`.
-The development version also offers opt-in `--include-go-sources`
-to select main-module Go sources, `go.mod`, and any existing `go.sum`
-automatically. Dependency-free Go projects without `go.sum` are
+In the published v0.1.0-alpha.4 release, Capture supports opt-in
+`--include-go-sources` to automatically select main-module Go sources,
+`go.mod`, and any existing `go.sum`. Manual `--include` selection
+remains available. Dependency-free Go projects without `go.sum` are
 supported: an empty file is embedded in the capsule.
 Active Go workspaces (`go.work`) are unsupported; use `GOWORK=off`.
 
@@ -83,7 +82,7 @@ Replay containers run without network access. The Docker host may still need net
 
 ## Install
 
-The current public alpha is [v0.1.0-alpha.3](https://github.com/buildfossil/buildfossil/releases/tag/v0.1.0-alpha.3).
+The current public alpha is [v0.1.0-alpha.4](https://github.com/buildfossil/buildfossil/releases/tag/v0.1.0-alpha.4).
 
 Prebuilt binaries are available for macOS ARM64 and Linux AMD64.
 These binaries are experimental and not production-ready.
@@ -93,18 +92,18 @@ Verify the downloaded archive against its SHA-256 checksum before extracting it.
 
 macOS ARM64:
 
-    grep 'buildfossil_v0.1.0-alpha.3_darwin_arm64.tar.gz' SHA256SUMS | shasum -a 256 -c -
-    tar -xzf buildfossil_v0.1.0-alpha.3_darwin_arm64.tar.gz
+    grep 'buildfossil_v0.1.0-alpha.4_darwin_arm64.tar.gz' SHA256SUMS | shasum -a 256 -c -
+    tar -xzf buildfossil_v0.1.0-alpha.4_darwin_arm64.tar.gz
     ./buildfossil version
 
 Linux AMD64:
 
-    grep 'buildfossil_v0.1.0-alpha.3_linux_amd64.tar.gz' SHA256SUMS | sha256sum -c -
-    tar -xzf buildfossil_v0.1.0-alpha.3_linux_amd64.tar.gz
+    grep 'buildfossil_v0.1.0-alpha.4_linux_amd64.tar.gz' SHA256SUMS | sha256sum -c -
+    tar -xzf buildfossil_v0.1.0-alpha.4_linux_amd64.tar.gz
     ./buildfossil version
 
 The checksum verification must report OK before extracting the archive.
-The expected version is `buildfossil v0.1.0-alpha.3`.
+The expected version is `buildfossil v0.1.0-alpha.4`.
 
 Set the CLI path before following Quick Start:
 
@@ -178,8 +177,7 @@ Capture the intentional compiler failure:
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOFLAGS='' \
 GOWORK=off GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off \
 "$BUILDFOSSIL_BIN" capture --v3 \
-  --include go.mod \
-  --include main.go \
+  --include-go-sources \
   -- go build ./...
 ```
 
@@ -208,13 +206,12 @@ Replay memory:      1 GiB
 Only replay capsules from trusted sources. Replay executes
 the command recorded inside the capsule.
 
-A maintainer-operated test of this public Quick Start is documented in the [alpha.3 Quick Start validation report](docs/alpha3-quickstart-validation.md). This is not independent external-user validation.
+The [alpha.3 Quick Start validation report](docs/alpha3-quickstart-validation.md) documents a maintainer-operated test of the earlier manual-inclusion workflow. It does not validate this updated alpha.4 Quick Start or constitute independent external-user validation.
 
 ## Automatic Go Source and Embed Discovery
 
-The development version adds opt-in `--include-go-sources` support.
-This option is not available in the published v0.1.0-alpha.3 binaries.
-Build the CLI from this development branch to try it.
+The published v0.1.0-alpha.4 release supports opt-in
+`--include-go-sources` for supported Go projects.
 
 For a supported Go project, run:
 
@@ -252,9 +249,8 @@ use it only with trusted source trees.
 includes become part of the `.bfc` capsule. Review the contents and
 avoid sharing capsules containing secrets or confidential source code.
 
-The workspace limit in the current development schema-v3 implementation
-is 2048 archived files, including a virtual `go.sum` when required.
-The published v0.1.0-alpha.3 release supports 256 files.
+The published v0.1.0-alpha.4 schema-v3 workspace limit is
+2,048 archived files, including a virtual `go.sum` when required.
 
 ## Understanding Replay Results
 
@@ -465,11 +461,10 @@ The current schema-v3 implementation:
 - Supports only the exact command `go build ./...`.
 - Requires Go 1.26.6.
 - Supports up to 128 selected external Go modules, including transitive dependencies, with at most 64 full ZIP modules.
-- The published v0.1.0-alpha.3 release requires explicit inclusion
-  of `go.mod`, necessary source files, and any existing `go.sum`.
-  The development version can select these automatically using
-  `--include-go-sources`. Dependency-free projects without `go.sum`
-  are supported.
+- The published v0.1.0-alpha.4 release supports opt-in
+  `--include-go-sources` to select main-module Go source files,
+  `go.mod`, and any existing `go.sum`. Manual inclusion remains
+  supported. Dependency-free projects without `go.sum` are supported.
 - Does not support active Go workspaces (`go.work`), `replace`,
   or `exclude` directives.
 - Requires the selected module graph and all required full or metadata-only
@@ -485,8 +480,7 @@ The current schema-v3 implementation:
 - Requires explicit inclusion of other workspace inputs not
   selected by Go source or embed discovery. Automatic discovery is
   opt-in and does not guarantee a complete source-tree snapshot.
-  The current development schema-v3 implementation allows up to
-  2048 archived files; published v0.1.0-alpha.3 supports 256.
+  The published schema-v3 workspace limit is 2,048 archived files.
   Without `--include-go-embed`, embedded resources must be included
   manually. With that flag, main-module embedded resources are
   discovered automatically.
