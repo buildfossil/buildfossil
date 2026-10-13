@@ -2,12 +2,12 @@
 # Replay Snapshot Security Model
 
 This document describes the integrity boundaries and trust assumptions
-of BuildFossil schema-v3 offline replay.
+of REW schema-v3 offline replay.
 
 For the general security policy, vulnerability reporting, and safe usage
 guidance, see [SECURITY.md](../SECURITY.md).
 
-BuildFossil remains experimental. Docker execution is not a security
+REW remains experimental. Docker execution is not a security
 sandbox for arbitrary hostile workloads.
 
 ## Scope
@@ -60,7 +60,7 @@ environment or filesystem races between inspection and execution.
 
 ## Integrity Properties
 
-BuildFossil verifies capsule structure, recorded file metadata,
+REW verifies capsule structure, recorded file metadata,
 workspace contents, and dependency artifacts.
 
 Snapshot archives are constructed from verified workspace bytes held
@@ -130,7 +130,7 @@ volumes or interfere with replay.
 
 ## Resource Cleanup
 
-BuildFossil attempts to remove:
+REW attempts to remove:
 
 1. Temporary preparation containers.
 2. The execution container.
@@ -151,7 +151,7 @@ resources may remain and require manual inspection.
 Docker snapshot volumes can be inspected using:
 
 ```sh
-docker volume ls --filter label=org.buildfossil.component=snapshot
+docker volume ls --filter label=org.rew.component=snapshot
 ```
 
 ## Remaining Risks
@@ -169,7 +169,7 @@ The snapshot architecture does not protect against:
 
 SHA-256 provides integrity checking, not publisher authentication.
 
-BuildFossil does not currently provide signed capsules or a
+REW does not currently provide signed capsules or a
 trusted publisher identity system.
 
 ## Out of Scope

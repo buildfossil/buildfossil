@@ -19,7 +19,7 @@ func WriteFile(output string, manifest Manifest, file WorkspaceFile) (err error)
 
 	dir := filepath.Dir(output)
 
-	temp, err := os.CreateTemp(dir, ".buildfossil-*.tmp")
+	temp, err := os.CreateTemp(dir, ".rew-*.tmp")
 	if err != nil {
 		return fmt.Errorf("capsule: create temporary file: %w", err)
 	}

@@ -3,7 +3,7 @@ package replay
 import (
 	"bytes"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 )
 
 type limitedDiagnosticWriter struct {

@@ -1,7 +1,7 @@
-# BuildFossil Validation Report
+# REW Validation Report
 
 This document records manually executed validation scenarios for
-BuildFossil v0.1.0-alpha.2.
+REW v0.1.0-alpha.2.
 
 These results describe specific tested configurations. They do not
 establish general build reproducibility or production readiness.
@@ -75,7 +75,7 @@ The original Cobra capsule was transferred from macOS ARM64
 to an independent GitHub Actions Ubuntu 24.04 AMD64 runner.
 
 The runner downloaded the official Linux AMD64 binary
-for BuildFossil v0.1.0-alpha.2.
+for REW v0.1.0-alpha.2.
 
 The binary and transferred capsule were checked against
 their expected SHA-256 hashes before replay.
@@ -89,7 +89,7 @@ Observed results:
 - Original exit code: 1
 - Replay exit code: 1
 - Outcome: reproduced
-- BuildFossil replay exit code: 0
+- REW replay exit code: 0
 - GitHub Actions conclusion: success
 
 The test ran in a separate private repository.
@@ -147,7 +147,7 @@ and verified against their recorded module metadata checksums.
 
 The recorded and replayed errors matched byte-for-byte:
 
-    # example.com/buildfossil-real-modules-16
+    # example.com/rew-real-modules-16
     ./main.go:23:2: undefined: buildFossilMissingSymbol
 
 Observed results:
@@ -163,7 +163,7 @@ v0.1.0-alpha.2 Cobra capsule containing six external Go modules.
 
 The full Docker-gated Go test suite passed on the development branch using:
 
-    BUILDFOSSIL_DOCKER_TEST=1 go test ./... -count=1 -timeout=10m
+    REW_DOCKER_TEST=1 go test ./... -count=1 -timeout=10m
 
 These results confirm the tested configuration only. They do not
 establish general reproducibility across arbitrary Go builds,

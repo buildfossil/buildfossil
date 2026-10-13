@@ -14,7 +14,7 @@ import (
 )
 
 func TestSnapshotExecutionContainerLostCreateResponse(t *testing.T) {
-	const containerID = "buildfossil-execution-lost-response-test-id"
+	const containerID = "rew-execution-lost-response-test-id"
 
 	var mu sync.Mutex
 	var containerExists bool
@@ -44,7 +44,7 @@ func TestSnapshotExecutionContainerLostCreateResponse(t *testing.T) {
 				return
 			}
 
-			ownershipToken = request.Labels["org.buildfossil.ownership-token"]
+			ownershipToken = request.Labels["org.rew.ownership-token"]
 
 			hijacker, ok := w.(http.Hijacker)
 			if !ok {
@@ -77,7 +77,7 @@ func TestSnapshotExecutionContainerLostCreateResponse(t *testing.T) {
 
 			_, _ = fmt.Fprintf(
 				w,
-				`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.buildfossil.component":"replay","org.buildfossil.ownership-token":%q}}}`,
+				`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.rew.component":"replay","org.rew.ownership-token":%q}}}`,
 				containerID,
 				"/"+containerName,
 				ownershipToken,

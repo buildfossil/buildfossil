@@ -8,8 +8,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
-	"github.com/buildfossil/buildfossil/internal/runtime/docker"
+	"github.com/rewtools/rew/internal/capsule"
+	"github.com/rewtools/rew/internal/runtime/docker"
 )
 
 // RunV3WithOptions replays a verified schema-v3 capsule with

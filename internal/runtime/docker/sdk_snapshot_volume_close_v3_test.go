@@ -23,7 +23,7 @@ func TestSnapshotVolumeCloseOwnershipV3(t *testing.T) {
 		{name: "reused name with foreign token", foreign: true, wantRemove: 0, wantError: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			const name = "buildfossil-snapshot-close-test"
+			const name = "rew-snapshot-close-test"
 			const token = "original-owner-token"
 
 			var mu sync.Mutex
@@ -49,9 +49,9 @@ func TestSnapshotVolumeCloseOwnershipV3(t *testing.T) {
 						"Name":   name,
 						"Driver": "local",
 						"Labels": map[string]string{
-							"org.buildfossil.component":       "snapshot",
-							"org.buildfossil.kind":            "workspace",
-							"org.buildfossil.ownership-token": currentToken,
+							"org.rew.component":       "snapshot",
+							"org.rew.kind":            "workspace",
+							"org.rew.ownership-token": currentToken,
 						},
 					})
 

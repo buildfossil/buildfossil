@@ -109,7 +109,7 @@ func TestSnapshotGoArchives(t *testing.T) {
 }
 
 func TestSnapshotOfflineGoBuild(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -301,7 +301,7 @@ func TestSnapshotOfflineGoBuild(t *testing.T) {
 		[]string{
 			"/bin/sh",
 			"-c",
-			"printf 'buildfossil-snapshot-error\\n' >&2; exit 23",
+			"printf 'rew-snapshot-error\\n' >&2; exit 23",
 		},
 	)
 	if err != nil {
@@ -316,7 +316,7 @@ func TestSnapshotOfflineGoBuild(t *testing.T) {
 		t.Fatalf("unexpected failure stdout: %q", stdout)
 	}
 
-	if string(stderr) != "buildfossil-snapshot-error\n" {
+	if string(stderr) != "rew-snapshot-error\n" {
 		t.Fatalf("unexpected failure stderr: %q", stderr)
 	}
 

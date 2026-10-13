@@ -14,7 +14,7 @@ import (
 )
 
 func TestOfflineExecutionContainerLostCreateResponse(t *testing.T) {
-	const containerID = "buildfossil-offline-exec-test-id"
+	const containerID = "rew-offline-exec-test-id"
 
 	var mu sync.Mutex
 	var containerExists bool
@@ -43,7 +43,7 @@ func TestOfflineExecutionContainerLostCreateResponse(t *testing.T) {
 				return
 			}
 
-			ownershipToken = request.Labels["org.buildfossil.ownership-token"]
+			ownershipToken = request.Labels["org.rew.ownership-token"]
 
 			hijacker, ok := w.(http.Hijacker)
 			if !ok {
@@ -73,7 +73,7 @@ func TestOfflineExecutionContainerLostCreateResponse(t *testing.T) {
 
 			_, _ = fmt.Fprintf(
 				w,
-				`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.buildfossil.component":"replay","org.buildfossil.ownership-token":%q}}}`,
+				`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.rew.component":"replay","org.rew.ownership-token":%q}}}`,
 				containerID,
 				"/"+containerName,
 				ownershipToken,
@@ -138,12 +138,12 @@ func TestOfflineExecutionContainerLostCreateResponse(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if !strings.HasPrefix(containerName, "buildfossil-offline-exec-") {
+	if !strings.HasPrefix(containerName, "rew-offline-exec-") {
 		t.Fatalf("missing offline container identity: %q", containerName)
 	}
 
 	if len(ownershipToken) != 32 ||
-		containerName != "buildfossil-offline-exec-"+ownershipToken {
+		containerName != "rew-offline-exec-"+ownershipToken {
 		t.Fatalf(
 			"invalid offline ownership identity: name=%q token=%q",
 			containerName,

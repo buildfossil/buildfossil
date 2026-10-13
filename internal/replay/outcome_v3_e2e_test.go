@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 )
 
 func TestReplayV3AmbiguousExit137E2E(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker E2E disabled")
 	}
 	if os.Geteuid() == 0 {
@@ -113,7 +113,7 @@ func TestReplayV3AmbiguousExit137E2E(t *testing.T) {
 	t.Logf("Replay v3 exit 137: %s", result.Outcome)
 	cliBinary := filepath.Join(t.TempDir(), "buildfossil")
 	build := exec.CommandContext(
-		ctx, "go", "build", "-o", cliBinary, "../../cmd/buildfossil",
+		ctx, "go", "build", "-o", cliBinary, "../../cmd/rew",
 	)
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build CLI: %v\\n%s", err, output)
@@ -139,7 +139,7 @@ func TestReplayV3AmbiguousExit137E2E(t *testing.T) {
 }
 
 func TestReplayV3AmbiguousExit143E2E(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker E2E disabled")
 	}
 	if os.Geteuid() == 0 {
@@ -237,7 +237,7 @@ func TestReplayV3AmbiguousExit143E2E(t *testing.T) {
 	t.Logf("Replay v3 exit 143: %s", result.Outcome)
 	cliBinary := filepath.Join(t.TempDir(), "buildfossil")
 	build := exec.CommandContext(
-		ctx, "go", "build", "-o", cliBinary, "../../cmd/buildfossil",
+		ctx, "go", "build", "-o", cliBinary, "../../cmd/rew",
 	)
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build CLI: %v\\n%s", err, output)

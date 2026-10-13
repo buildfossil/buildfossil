@@ -21,7 +21,7 @@ for target in darwin/arm64 linux/amd64; do
   os="${target%/*}"
   arch="${target#*/}"
 
-  name="buildfossil_${version}_${os}_${arch}"
+  name="rew_${version}_${os}_${arch}"
   stage="$(mktemp -d)"
 
   echo "Building ${target}"
@@ -31,15 +31,15 @@ for target in darwin/arm64 linux/amd64; do
     -trimpath \
     -buildvcs=false \
     -ldflags="-X main.releaseVersion=${version}" \
-    -o "$stage/buildfossil" \
-    ./cmd/buildfossil
+    -o "$stage/rew" \
+    ./cmd/rew
 
   if [[ "$os" == "darwin" && "$(uname -s)" == "Darwin" && "$(uname -m)" == "arm64" ]] ||
      [[ "$os" == "linux" && "$(uname -s)" == "Linux" && "$(uname -m)" == "x86_64" ]]; then
 
-    actual="$("$stage/buildfossil" version)"
+    actual="$("$stage/rew" version)"
 
-    if [[ "$actual" != "buildfossil ${version}" ]]; then
+    if [[ "$actual" != "rew ${version}" ]]; then
       echo "release: wrong embedded version: $actual" >&2
       rm -rf "$stage"
       exit 1
@@ -47,7 +47,7 @@ for target in darwin/arm64 linux/amd64; do
   fi
 
   tar -czf "$output_dir/${name}.tar.gz" \
-    -C "$stage" buildfossil
+    -C "$stage" rew
 
   rm -rf "$stage"
 done

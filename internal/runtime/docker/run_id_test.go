@@ -39,7 +39,7 @@ func TestNewRunID(t *testing.T) {
 }
 
 func TestSDKRunContainerHasRunID(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -100,7 +100,7 @@ func TestSDKRunContainerHasRunID(t *testing.T) {
 		}
 
 		for _, item := range containers.Items {
-			if item.Labels["org.buildfossil.component"] != "replay" {
+			if item.Labels["org.rew.component"] != "replay" {
 				continue
 			}
 
@@ -129,7 +129,7 @@ func TestSDKRunContainerHasRunID(t *testing.T) {
 			for _, mount := range inspected.Container.HostConfig.Mounts {
 				if mount.Source == workspace {
 					containerID = item.ID
-					runID = item.Labels["org.buildfossil.run-id"]
+					runID = item.Labels["org.rew.run-id"]
 					break
 				}
 			}

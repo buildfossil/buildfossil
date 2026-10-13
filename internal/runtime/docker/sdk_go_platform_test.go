@@ -104,7 +104,7 @@ func TestConfigureGoTargetPlatform(t *testing.T) {
 }
 
 func TestSDKGoDarwinARM64BuildFailure(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 

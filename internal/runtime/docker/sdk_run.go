@@ -247,7 +247,7 @@ func runWithSDKOptionsTargetModules(
 
 	createOptions := newSecureContainerOptions(workspace, argv, user)
 	createOptions.Config.Image = image
-	createOptions.Config.Labels["org.buildfossil.run-id"] = runID
+	createOptions.Config.Labels["org.rew.run-id"] = runID
 
 	if runtime != nil && runtime.Kind == "go" {
 		createOptions.Config.Env = []string{
@@ -430,9 +430,9 @@ func createStandardExecutionContainer(
 	options client.ContainerCreateOptions,
 	runID string,
 ) (client.ContainerCreateResult, error) {
-	name := "buildfossil-replay-exec-" + runID
+	name := "rew-replay-exec-" + runID
 	options.Name = name
-	options.Config.Labels["org.buildfossil.ownership-token"] = runID
+	options.Config.Labels["org.rew.ownership-token"] = runID
 
 	created, err := dockerClient.ContainerCreate(ctx, options)
 	if err != nil {

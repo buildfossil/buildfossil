@@ -63,7 +63,7 @@ func TestSelectReplayImage(t *testing.T) {
 	}
 }
 func TestSDKGoRuntimeBuildFailure(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -71,7 +71,7 @@ func TestSDKGoRuntimeBuildFailure(t *testing.T) {
 
 	if err := os.WriteFile(
 		filepath.Join(workspace, "go.mod"),
-		[]byte("module example.com/buildfossil-probe\n\ngo 1.26.0\n"),
+		[]byte("module example.com/rew-probe\n\ngo 1.26.0\n"),
 		0600,
 	); err != nil {
 		t.Fatal(err)

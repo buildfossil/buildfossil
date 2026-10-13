@@ -1,4 +1,4 @@
-# BuildFossil — Supported Scope and Limitations
+# REW — Supported Scope and Limitations
 
 ## Status
 
@@ -6,7 +6,7 @@ This document describes the current schema-v3 development implementation.
 The published v0.1.0-alpha.3 release has lower workspace capacity;
 unreleased changes described here are not available in that binary.
 
-BuildFossil is not production-ready. Supported scenarios are intentionally narrow, and successful reproduction is not guaranteed outside the tested configurations.
+REW is not production-ready. Supported scenarios are intentionally narrow, and successful reproduction is not guaranteed outside the tested configurations.
 
 ## Support Matrix
 
@@ -108,7 +108,7 @@ Schema v3 supports up to 64 complete module ZIP snapshots and a
 96 MiB capsule size limit. Capsules requiring graph-only module metadata add the optional
 `go_graph_mod_files` manifest field and corresponding verified artifacts.
 
-BuildFossil v0.1.0-alpha.2 readers support at most eight external
+REW v0.1.0-alpha.2 readers support at most eight external
 Go modules. The v0.1.0-alpha.3 implementation allows 128 selected modules,
 but older readers must not be assumed to accept new selective-capture capsules.
 
@@ -143,7 +143,7 @@ Dependency content is verified, but verification does not establish whether the 
 
 The user selects files through `--include`.
 
-Files referenced by Go `//go:embed` directives must also be included explicitly. BuildFossil does not currently discover and include those resources automatically.
+Files referenced by Go `//go:embed` directives must also be included explicitly. REW does not currently discover and include those resources automatically.
 
 The resulting capsule does not automatically contain the entire repository or working environment.
 
@@ -197,7 +197,7 @@ Therefore, replay should not be interpreted as an exact record-and-reexecute mec
 
 ## Failure Comparison
 
-A reproduced outcome indicates agreement according to BuildFossil's implemented comparison criteria.
+A reproduced outcome indicates agreement according to REW's implemented comparison criteria.
 
 For the supported deterministic compiler-failure scenario, exit code and stderr are central to this comparison.
 
@@ -210,11 +210,11 @@ Known sources of divergence include:
 - Unsupported module configurations
 - Differences between host and container execution environments
 
-A different result is not necessarily a BuildFossil defect; it can indicate that the captured environment was insufficient to reproduce the original failure.
+A different result is not necessarily a REW defect; it can indicate that the captured environment was insufficient to reproduce the original failure.
 
 ## Security Limitations
 
-BuildFossil is not currently a safe executor for arbitrary untrusted capsules.
+REW is not currently a safe executor for arbitrary untrusted capsules.
 
 Important limitations include:
 
@@ -244,7 +244,7 @@ These capabilities require separate engineering and validation.
 
 ## Before Public Alpha
 
-The following work remains necessary before treating BuildFossil as a public alpha candidate:
+The following work remains necessary before treating REW as a public alpha candidate:
 
 1. Security review of capsule parsing and restoration.
 2. Hardening staging and Docker execution boundaries.

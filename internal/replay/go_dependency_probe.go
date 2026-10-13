@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
-	"github.com/buildfossil/buildfossil/internal/runtime/docker"
+	"github.com/rewtools/rew/internal/capsule"
+	"github.com/rewtools/rew/internal/runtime/docker"
 )
 
 func goDependencyProbeArgs() []string {

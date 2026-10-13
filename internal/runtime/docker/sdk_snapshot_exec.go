@@ -446,9 +446,9 @@ func createSnapshotExecutionContainer(
 		return client.ContainerCreateResult{}, err
 	}
 
-	name := "buildfossil-snapshot-exec-" + token
+	name := "rew-snapshot-exec-" + token
 	options.Name = name
-	options.Config.Labels["org.buildfossil.ownership-token"] = token
+	options.Config.Labels["org.rew.ownership-token"] = token
 
 	created, err := dockerClient.ContainerCreate(ctx, options)
 	if err != nil {

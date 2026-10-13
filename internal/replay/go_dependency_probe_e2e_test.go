@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 )
 
 func TestGoDependencyProbeDockerE2E(t *testing.T) {

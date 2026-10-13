@@ -1,8 +1,9 @@
-# BuildFossil binaries
+# REW binaries
+/rew
 /buildfossil
 /bin/
 
-# BuildFossil capsules
+# REW capsules
 *.bfc
 
 # Local experiments
@@ -29,6 +30,6 @@ coverage.html
 # Local capture experiments
 /.buildfossil-capture-*/
 
-# Local BuildFossil integration experiments
+# Legacy local integration experiments
 .buildfossil-linux-v2-capture/
 .buildfossil-permissions-test/

@@ -53,7 +53,7 @@ func TestSnapshotVolumeCreateRollbackErrorsV3(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			const volumeName = "buildfossil-snapshot-error-test"
+			const volumeName = "rew-snapshot-error-test"
 
 			var mu sync.Mutex
 			var labels map[string]string
@@ -173,9 +173,9 @@ func TestSnapshotVolumeCreateRollbackErrorsV3(t *testing.T) {
 				)
 			}
 
-			if labels["org.buildfossil.component"] != "snapshot" ||
-				labels["org.buildfossil.kind"] != "workspace" ||
-				labels["org.buildfossil.ownership-token"] == "" {
+			if labels["org.rew.component"] != "snapshot" ||
+				labels["org.rew.kind"] != "workspace" ||
+				labels["org.rew.ownership-token"] == "" {
 				t.Fatalf("missing volume ownership identity: %v", labels)
 			}
 		})

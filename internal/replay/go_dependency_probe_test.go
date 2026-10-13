@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 )
 
 func TestGoDependencyProbeArgs(t *testing.T) {

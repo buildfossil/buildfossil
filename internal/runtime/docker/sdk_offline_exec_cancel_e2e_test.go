@@ -15,7 +15,7 @@ import (
 )
 
 func TestSDKOfflineExecCancelAfterCommandStarted(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 	if os.Geteuid() == 0 {
@@ -96,7 +96,7 @@ func TestSDKOfflineExecCancelAfterCommandStarted(t *testing.T) {
 		}
 
 		for _, item := range containers.Items {
-			if item.Labels["org.buildfossil.component"] != "replay" {
+			if item.Labels["org.rew.component"] != "replay" {
 				continue
 			}
 

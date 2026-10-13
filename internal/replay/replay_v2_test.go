@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 )
 
 func TestReplayV2RejectsCommandWithoutOptIn(t *testing.T) {
@@ -63,8 +63,8 @@ func TestReplayV2RejectsCommandWithoutOptIn(t *testing.T) {
 }
 
 func TestReplayV2DockerIntegration(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
-		t.Skip("set BUILDFOSSIL_DOCKER_TEST=1 to run Docker tests")
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
+		t.Skip("set REW_DOCKER_TEST=1 to run Docker tests")
 	}
 
 	manifest := capsule.Manifest{
@@ -143,8 +143,8 @@ func TestReplayV2DockerIntegration(t *testing.T) {
 }
 
 func TestReplayV2GoBuildIntegration(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
-		t.Skip("set BUILDFOSSIL_DOCKER_TEST=1 to run Docker tests")
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
+		t.Skip("set REW_DOCKER_TEST=1 to run Docker tests")
 	}
 
 	const compilerStderr = "# example.com/buildfossil-probe\n" +
@@ -292,8 +292,8 @@ func TestReplayV2GoBuildIntegration(t *testing.T) {
 }
 
 func TestReplayV2MissingDependencyDiagnostics(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
-		t.Skip("set BUILDFOSSIL_DOCKER_TEST=1 to run Docker tests")
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
+		t.Skip("set REW_DOCKER_TEST=1 to run Docker tests")
 	}
 
 	manifest := capsule.Manifest{

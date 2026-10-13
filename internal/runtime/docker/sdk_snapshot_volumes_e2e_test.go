@@ -43,7 +43,7 @@ func snapshotTestTAR(t *testing.T, name, value string) []byte {
 }
 
 func TestSnapshotVolumesEndToEnd(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -272,7 +272,7 @@ func TestSnapshotVolumesEndToEnd(t *testing.T) {
 }
 
 func TestSnapshotVolumesRollbackOnSecondUploadFailure(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -362,7 +362,7 @@ func TestSnapshotVolumesRollbackOnSecondUploadFailure(t *testing.T) {
 }
 
 func TestSnapshotVolumesCloseAfterCancellation(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -433,7 +433,7 @@ func TestSnapshotVolumesCloseAfterCancellation(t *testing.T) {
 }
 
 func TestSnapshotVolumesPinnedGoImage(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 

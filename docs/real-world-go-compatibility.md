@@ -21,7 +21,7 @@ Observed local results:
 - Explicitly included workspace files: **1081**.
 - Embedded test resources included explicitly: **1049**.
 - Original compilation failure:
-  `undefined: buildfossilIntentionallyUndefined`.
+  `undefined: rewIntentionallyUndefined`.
 - Original exit code: `1`.
 - Schema-v3 capsule size: **1568768 bytes**.
 - Replay target: pinned Linux AMD64 Go runtime in Docker.
@@ -46,10 +46,10 @@ of untrusted capsules, or release availability.
 
 ---
 
-## BuildFossil v0.1.0-alpha.3 Validation
+## REW v0.1.0-alpha.3 Validation
 
 The larger-project implementation was integrated through
-[Pull Request #37](https://github.com/buildfossil/buildfossil/pull/37)
+[Pull Request #37](https://github.com/rewtools/rew/pull/37)
 and released from commit `7c47578978e109e60ae2c20b955442c365601cf4`.
 
 The schema-v3 implementation supports:
@@ -86,13 +86,13 @@ archive creation, and SHA-256 verification.
 
 The public macOS ARM64 and Linux AMD64 release archives were downloaded
 from GitHub Releases and successfully verified against `SHA256SUMS`.
-The macOS ARM64 binary reported `buildfossil v0.1.0-alpha.3`.
+The macOS ARM64 binary reported `rew v0.1.0-alpha.3`.
 
 Release:
 https://github.com/buildfossil/buildfossil/releases/tag/v0.1.0-alpha.3
 
 Tagged validation:
-https://github.com/buildfossil/buildfossil/actions/runs/38202436931
+https://github.com/rewtools/rew/actions/runs/38202436931
 
 These results do not establish support for arbitrary Go projects,
 complete CI environments, or execution of untrusted capsules.
@@ -102,7 +102,7 @@ complete CI environments, or execution of untrusted capsules.
 ## Scope
 
 This report records historical local compatibility checks performed
-against BuildFossil development commit `39ee427` in October 2026.
+against REW development commit `39ee427` in October 2026.
 
 The original results below describe the earlier implementation, not the
 published `v0.1.0-alpha.3` binaries. See the alpha.3 validation section
@@ -160,7 +160,7 @@ Docker-gated regression test.
 The pinned original project built successfully and remained clean.
 
 A separate fixture copy introduced one undefined symbol:
-`undefinedBuildFossilSymbol`.
+`undefinedREWSymbol`.
 
 Observed results:
 
@@ -180,16 +180,16 @@ This is a controlled failure, not an upstream Cobra defect.
 The remaining projects were inspected using Go module and/or
 package dependency listing.
 
-These projects were **not** subjected to full BuildFossil
+These projects were **not** subjected to full REW
 Capture → Docker Replay.
 
 Their unsupported-capacity classification follows from
 observed module counts exceeding the current implementation
-limits, not from an observed BuildFossil capture failure.
+limits, not from an observed REW capture failure.
 
 Build-module counts obtained using `go list -deps -e -json ./...`
 are estimates of required full module artifacts; they are
-not measurements from completed BuildFossil captures.
+not measurements from completed REW captures.
 
 The Lazygit repository contains a vendor directory.
 Its module graph was inspected using `go list -mod=mod -m all`;
@@ -198,7 +198,7 @@ vendor-mode Capture compatibility was not established.
 ## Interpretation
 
 A `reproduced` outcome means the recorded and replayed failures
-matched BuildFossil's current comparison criteria in that test.
+matched REW's current comparison criteria in that test.
 
 It does not establish:
 

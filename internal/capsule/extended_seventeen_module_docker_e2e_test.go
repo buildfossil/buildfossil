@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	dockerruntime "github.com/buildfossil/buildfossil/internal/runtime/docker"
+	dockerruntime "github.com/rewtools/rew/internal/runtime/docker"
 )
 
 func TestExtendedSeventeenModuleDockerReplayV3(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 

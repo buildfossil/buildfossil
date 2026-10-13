@@ -12,7 +12,7 @@ import (
 )
 
 func TestSDKOfflineExecRunner(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -83,7 +83,7 @@ func TestSDKOfflineExecRunner(t *testing.T) {
 			[]string{
 				"/bin/sh",
 				"-c",
-				"printf 'buildfossil-test-error\n' >&2; exit 23",
+				"printf 'rew-test-error\n' >&2; exit 23",
 			},
 			user,
 			&stdout,
@@ -99,7 +99,7 @@ func TestSDKOfflineExecRunner(t *testing.T) {
 			t.Fatalf("exit code=%d, want 23", code)
 		}
 
-		if stderr.String() != "buildfossil-test-error\n" {
+		if stderr.String() != "rew-test-error\n" {
 			t.Fatalf("stderr=%q, want expected error", stderr.String())
 		}
 
@@ -108,7 +108,7 @@ func TestSDKOfflineExecRunner(t *testing.T) {
 }
 
 func TestSDKOfflineExecCancellation(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 

@@ -16,7 +16,7 @@ import (
 )
 
 func TestSDKSnapshotVolumePrototype(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -35,12 +35,12 @@ func TestSDKSnapshotVolumePrototype(t *testing.T) {
 
 	image := "alpine:3.21"
 
-	volumeName := fmt.Sprintf("buildfossil-snapshot-test-%d", time.Now().UnixNano())
+	volumeName := fmt.Sprintf("rew-snapshot-test-%d", time.Now().UnixNano())
 
 	_, err = cli.VolumeCreate(ctx, client.VolumeCreateOptions{
 		Name: volumeName,
 		Labels: map[string]string{
-			"org.buildfossil.component": "test-snapshot",
+			"org.rew.component": "test-snapshot",
 		},
 	})
 	if err != nil {
@@ -95,7 +95,7 @@ func TestSDKSnapshotVolumePrototype(t *testing.T) {
 	hostWorkspace := t.TempDir()
 	hostFile := filepath.Join(hostWorkspace, "test.txt")
 
-	original := []byte("verified-buildfossil-data\n")
+	original := []byte("verified-rew-data\n")
 
 	if err := os.WriteFile(hostFile, original, 0600); err != nil {
 		t.Fatal(err)

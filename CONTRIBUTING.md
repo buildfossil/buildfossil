@@ -1,8 +1,8 @@
-# Contributing to BuildFossil
+# Contributing to REW
 
-Thank you for your interest in contributing to BuildFossil!
+Thank you for your interest in contributing to REW!
 
-BuildFossil is an experimental open-source developer tool for capturing failed Go builds and replaying them offline in Docker.
+REW is an experimental open-source developer tool for capturing failed Go builds and replaying them offline in Docker.
 
 The project is under active development. Contributions of all sizes are welcome, including bug reports, tests, documentation, code improvements, and thoughtful technical discussions.
 
@@ -15,7 +15,7 @@ Please read:
 - [Limitations](docs/limitations.md) — supported and unsupported scenarios
 - [Security Policy](SECURITY.md) — trust boundaries and security considerations
 
-BuildFossil is not production-ready. Please avoid assuming that unsupported commands, environments, or dependency configurations work.
+REW is not production-ready. Please avoid assuming that unsupported commands, environments, or dependency configurations work.
 
 ## Ways to Contribute
 
@@ -47,18 +47,18 @@ If no suitable issue exists, feel free to open one describing your proposal.
 Fork the repository on GitHub, then clone your fork:
 
 ```sh
-git clone https://github.com/YOUR_USERNAME/buildfossil.git
-cd buildfossil
+git clone https://github.com/YOUR_USERNAME/rew.git
+cd rew
 ```
 
 Build the CLI:
 
 ```sh
-go build -o buildfossil ./cmd/buildfossil
-./buildfossil version
+go build -o rew ./cmd/rew
+./rew version
 ```
 
-The development version currently reports `buildfossil dev`.
+The development version currently reports `rew dev`.
 
 ### Run Tests
 
@@ -83,7 +83,7 @@ gofmt -l ./cmd ./internal
 Run Docker-dependent integration tests when Docker is available:
 
 ```sh
-BUILDFOSSIL_DOCKER_TEST=1 go test -p 1 -count=1 -timeout 15m ./...
+REW_DOCKER_TEST=1 go test -p 1 -count=1 -timeout 15m ./...
 ```
 
 Docker-dependent tests may pull the pinned replay image. Check that Docker is running and your machine supports the required architecture.
@@ -126,7 +126,7 @@ Please do not submit large code rewrites without prior discussion.
 
 ## Code Style
 
-BuildFossil is written primarily in Go.
+REW is written primarily in Go.
 
 Please:
 
@@ -141,7 +141,7 @@ Please:
 
 ## Security-Sensitive Changes
 
-Some parts of BuildFossil require additional review:
+Some parts of REW require additional review:
 
 - Capsule archive parsing and verification
 - Workspace restoration and staging
@@ -199,6 +199,6 @@ Submitting a contribution does not guarantee acceptance or a particular review t
 
 Maintainers may request changes, additional tests, or design discussion.
 
-The goal is to maintain a reliable, understandable, and secure foundation for BuildFossil.
+The goal is to maintain a reliable, understandable, and secure foundation for REW.
 
-Thank you for helping improve BuildFossil!
+Thank you for helping improve REW!

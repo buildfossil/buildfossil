@@ -7,8 +7,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
-	"github.com/buildfossil/buildfossil/internal/runtime/docker"
+	"github.com/rewtools/rew/internal/capsule"
+	"github.com/rewtools/rew/internal/runtime/docker"
 )
 
 // RunV2WithOptions replays a verified schema-v2 capsule.
@@ -49,7 +49,7 @@ func RunV2WithOptions(
 	containerUser := strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
 	argv := verified.Manifest.Execution.Argv
 
-	workspace, err := os.MkdirTemp("", "buildfossil-replay-v2-*")
+	workspace, err := os.MkdirTemp("", "rew-replay-v2-*")
 	if err != nil {
 		return result, fmt.Errorf("replay: create workspace: %w", err)
 	}

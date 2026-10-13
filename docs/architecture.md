@@ -1,4 +1,4 @@
-# BuildFossil Architecture
+# REW Architecture
 
 ## Status
 
@@ -8,7 +8,7 @@ It is not a specification for future releases. The archive format and implementa
 
 ## Purpose
 
-BuildFossil attempts to reproduce certain failed Go builds using a captured subset of the original inputs.
+REW attempts to reproduce certain failed Go builds using a captured subset of the original inputs.
 
 Its architecture consists of four main stages:
 
@@ -21,7 +21,7 @@ Its architecture consists of four main stages:
 
 | Directory | Responsibility |
 |---|---|
-| `cmd/buildfossil` | CLI argument handling and capture entry points |
+| `cmd/rew` | CLI argument handling and capture entry points |
 | `internal/capsule` | Manifest, archive writing, verification, and restoration |
 | `internal/execution` | Captured command execution |
 | `internal/replay` | Replay orchestration, portability checks, and result comparison |
@@ -34,7 +34,7 @@ Its architecture consists of four main stages:
 Original Go workspace
         |
         v
-buildfossil capture --v3
+rew capture --v3
         |
         +-- Validate supported command and runtime
         |
@@ -56,7 +56,7 @@ buildfossil capture --v3
     failure.bfc
         |
         v
-buildfossil replay --v3 --allow-command
+rew replay --v3 --allow-command
         |
         +-- Verify capsule contents
         |
@@ -90,7 +90,7 @@ Outcome
 
 The schema-v3 entry point is implemented in:
 
-`cmd/buildfossil/capture_v3.go`
+`cmd/rew/capture_v3.go`
 
 The CLI currently accepts only the supported command:
 
@@ -100,7 +100,7 @@ The capture stage inspects the Go environment before executing the original buil
 
 If the build succeeds, no failure capsule is written.
 
-If it fails, BuildFossil requires complete, nonempty stderr and attempts to package the recorded failure.
+If it fails, REW requires complete, nonempty stderr and attempts to package the recorded failure.
 
 The user must explicitly select workspace files using `--include`.
 
@@ -156,7 +156,7 @@ Schema-v3 capture and replay use bounded, disk-backed processing for
 larger Go projects rather than retaining all dependency artifacts and
 prepared snapshots in memory.
 
-During replay, BuildFossil verifies capsule contents into a temporary
+During replay, REW verifies capsule contents into a temporary
 artifact store and constructs TAR snapshots from verified readers.
 Snapshot files are passed to the Docker upload path using retained file
 descriptors, avoiding pathname-based reopening after preparation.
@@ -253,7 +253,7 @@ Docker is not a complete security boundary for malicious workloads.
 
 ## Failure Comparison
 
-BuildFossil compares recorded and replayed failure results.
+REW compares recorded and replayed failure results.
 
 For the supported schema-v3 scenario, successful reproduction requires matching failure characteristics, including the exit status and stderr.
 
@@ -317,6 +317,6 @@ Docker integration tests require an available Docker daemon and the relevant tes
 
 ## Design Principle
 
-BuildFossil currently prioritizes a small, explicit, verifiable execution model over broad but weakly specified CI compatibility.
+REW currently prioritizes a small, explicit, verifiable execution model over broad but weakly specified CI compatibility.
 
 New runtime, dependency, or platform support should come with corresponding verification rules and end-to-end tests.

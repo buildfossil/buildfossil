@@ -75,7 +75,7 @@ func TestOfflineExecutionCreateErrorHandling(t *testing.T) {
 							w.WriteHeader(http.StatusBadRequest)
 							return
 						}
-						observedToken = request.Labels["org.buildfossil.ownership-token"]
+						observedToken = request.Labels["org.rew.ownership-token"]
 
 						w.Header().Set("Content-Type", "application/json")
 						w.WriteHeader(http.StatusInternalServerError)
@@ -108,7 +108,7 @@ func TestOfflineExecutionCreateErrorHandling(t *testing.T) {
 						w.Header().Set("Content-Type", "application/json")
 						_, _ = fmt.Fprintf(
 							w,
-							`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.buildfossil.component":"replay","org.buildfossil.ownership-token":%q}}}`,
+							`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.rew.component":"replay","org.rew.ownership-token":%q}}}`,
 							containerID,
 							"/"+observedName,
 							token,
@@ -184,7 +184,7 @@ func TestOfflineExecutionCreateErrorHandling(t *testing.T) {
 			defer mu.Unlock()
 
 			if len(observedToken) != 32 ||
-				observedName != "buildfossil-offline-exec-"+observedToken {
+				observedName != "rew-offline-exec-"+observedToken {
 				t.Fatalf(
 					"invalid container ownership: name=%q token=%q",
 					observedName, observedToken,

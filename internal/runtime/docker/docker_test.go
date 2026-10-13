@@ -10,8 +10,8 @@ import (
 )
 
 func TestDockerRunIntegration(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
-		t.Skip("set BUILDFOSSIL_DOCKER_TEST=1 to run Docker integration test")
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
+		t.Skip("set REW_DOCKER_TEST=1 to run Docker integration test")
 	}
 
 	workspace := t.TempDir()

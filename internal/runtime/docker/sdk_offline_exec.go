@@ -192,9 +192,9 @@ func createOfflineExecutionContainer(
 		return client.ContainerCreateResult{}, err
 	}
 
-	name := "buildfossil-offline-exec-" + token
+	name := "rew-offline-exec-" + token
 	options.Name = name
-	options.Config.Labels["org.buildfossil.ownership-token"] = token
+	options.Config.Labels["org.rew.ownership-token"] = token
 
 	created, err := dockerClient.ContainerCreate(ctx, options)
 	if err != nil {

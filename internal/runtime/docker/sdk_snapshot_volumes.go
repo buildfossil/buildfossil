@@ -37,7 +37,7 @@ func newSnapshotVolumeName() (string, error) {
 		return "", fmt.Errorf("docker SDK: generate volume ID: %w", err)
 	}
 
-	return "buildfossil-snapshot-" +
+	return "rew-snapshot-" +
 		hex.EncodeToString(random[:]), nil
 }
 
@@ -173,9 +173,9 @@ func createSnapshotVolumesFromReadersWithNameGenerator(
 			client.VolumeCreateOptions{
 				Name: name,
 				Labels: map[string]string{
-					"org.buildfossil.component":       "snapshot",
-					"org.buildfossil.kind":            snapshot.kind,
-					"org.buildfossil.ownership-token": token,
+					"org.rew.component":       "snapshot",
+					"org.rew.kind":            snapshot.kind,
+					"org.rew.ownership-token": token,
 				},
 			},
 		)
@@ -214,9 +214,9 @@ func createSnapshotVolumesFromReadersWithNameGenerator(
 			return nil, err
 		}
 
-		containerName := "buildfossil-snapshot-prep-" + ownershipToken
+		containerName := "rew-snapshot-prep-" + ownershipToken
 		options.Name = containerName
-		options.Config.Labels["org.buildfossil.ownership-token"] = ownershipToken
+		options.Config.Labels["org.rew.ownership-token"] = ownershipToken
 
 		created, err := dockerClient.ContainerCreate(ctx, options)
 		if err != nil {
@@ -387,9 +387,9 @@ func (v *SnapshotVolumes) removeOwnedVolume(
 	}
 
 	if inspected.Volume.Name != name ||
-		inspected.Volume.Labels["org.buildfossil.component"] != "snapshot" ||
-		inspected.Volume.Labels["org.buildfossil.kind"] != kind ||
-		inspected.Volume.Labels["org.buildfossil.ownership-token"] != token {
+		inspected.Volume.Labels["org.rew.component"] != "snapshot" ||
+		inspected.Volume.Labels["org.rew.kind"] != kind ||
+		inspected.Volume.Labels["org.rew.ownership-token"] != token {
 		return fmt.Errorf("docker SDK: unverified snapshot volume ownership: %s", name)
 	}
 
@@ -445,8 +445,8 @@ func cleanupUnknownContainer(
 
 	if inspected.Container.Config == nil ||
 		inspected.Container.Name != "/"+name ||
-		inspected.Container.Config.Labels["org.buildfossil.component"] != "replay" ||
-		inspected.Container.Config.Labels["org.buildfossil.ownership-token"] != token ||
+		inspected.Container.Config.Labels["org.rew.component"] != "replay" ||
+		inspected.Container.Config.Labels["org.rew.ownership-token"] != token ||
 		inspected.Container.ID == "" {
 		return fmt.Errorf(
 			"docker SDK: uncertain %s container %s has unverified ownership",

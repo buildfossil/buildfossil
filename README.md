@@ -1,6 +1,10 @@
 <div align="center">
 
-  <img src="assets/img/logo.svg" alt="BuildFossil" width="340">
+  <picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/img/dark_logo.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/img/light_logo.png">
+  <img src="assets/img/light_logo.png" alt="REW logo" width="340">
+</picture>
 
   <h3>Capture a failed Go build. Replay the failure offline.</h3>
 
@@ -18,19 +22,19 @@
 
 </div>
 
-BuildFossil is an experimental open-source CLI that packages a failed Go build, selected workspace files, and verified dependency artifacts into a portable `.bfc` capsule.
+REW is an experimental open-source CLI that packages a failed Go build, selected workspace files, and verified dependency artifacts into a portable `.bfc` capsule.
 
 The capsule can then be replayed inside a constrained Linux Docker container without network access from the container.
 
 > **Status:** Experimental engineering prototype. Not production-ready.
 
-## Why BuildFossil?
+## Why REW?
 
 A build can fail in one environment and be difficult to reproduce in another.
 
-BuildFossil explores a different debugging workflow:
+REW explores a different debugging workflow:
 
-1. Run a build through BuildFossil.
+1. Run a build through REW.
 2. Capture a failed execution and its required inputs.
 3. Transfer the resulting `.bfc` capsule.
 4. Verify the capsule and replay the build in Docker.
@@ -38,7 +42,7 @@ BuildFossil explores a different debugging workflow:
 
 The goal is to make certain build failures easier to investigate without repeatedly recreating the original environment.
 
-BuildFossil does not guarantee that every build failure can be reproduced.
+REW does not guarantee that every build failure can be reproduced.
 
 ## Current Support
 
@@ -55,14 +59,14 @@ The schema-v3 prototype supports:
 - Comparison of original and replayed failures.
 - An explicit opt-in for replaying captured commands.
 
-BuildFossil also retains older experimental capture/replay modes.
+REW also retains older experimental capture/replay modes.
 
 The schema-v3 format is experimental and may change.
 
 Projects with no external Go dependencies are supported. For these
 projects, the capsule contains no dependency artifacts.
 
-In the published v0.1.0-alpha.4 release, Capture supports opt-in
+The current implementation supports opt-in
 `--include-go-sources` to automatically select main-module Go sources,
 `go.mod`, and any existing `go.sum`. Manual `--include` selection
 remains available. Dependency-free Go projects without `go.sum` are
@@ -82,64 +86,59 @@ Replay containers run without network access. The Docker host may still need net
 
 ## Install
 
-The current public alpha is [v0.1.0-alpha.4](https://github.com/buildfossil/buildfossil/releases/tag/v0.1.0-alpha.4).
+REW has not yet been publicly released under its new name.
+Until the first REW release, build the CLI from source.
 
-Prebuilt binaries are available for macOS ARM64 and Linux AMD64.
-These binaries are experimental and not production-ready.
-
-Download the archive for your platform and SHA256SUMS from the release page.
-Verify the downloaded archive against its SHA-256 checksum before extracting it.
-
-macOS ARM64:
-
-    grep 'buildfossil_v0.1.0-alpha.4_darwin_arm64.tar.gz' SHA256SUMS | shasum -a 256 -c -
-    tar -xzf buildfossil_v0.1.0-alpha.4_darwin_arm64.tar.gz
-    ./buildfossil version
-
-Linux AMD64:
-
-    grep 'buildfossil_v0.1.0-alpha.4_linux_amd64.tar.gz' SHA256SUMS | sha256sum -c -
-    tar -xzf buildfossil_v0.1.0-alpha.4_linux_amd64.tar.gz
-    ./buildfossil version
-
-The checksum verification must report OK before extracting the archive.
-The expected version is `buildfossil v0.1.0-alpha.4`.
-
-Set the CLI path before following Quick Start:
-
-    export BUILDFOSSIL_BIN="$(pwd)/buildfossil"
-
-The macOS binary is not Developer ID signed or notarized.
-macOS Gatekeeper may require explicit approval.
-Do not run binaries from untrusted sources.
-
-## Install from Source
-
-Clone the repository and build the CLI:
+Requirements: Go 1.26.6 and a supported development platform.
 
 ```sh
-git clone https://github.com/buildfossil/buildfossil.git
-cd buildfossil
-
-go build -o buildfossil ./cmd/buildfossil
-BUILDFOSSIL_BIN="$(pwd)/buildfossil"
-./buildfossil version
+git clone https://github.com/rewtools/rew.git
+cd rew
+go build -o rew ./cmd/rew
+./rew version
 ```
 
-Locally built development binaries normally report `buildfossil dev`.
-Binaries installed from a tagged Go module report the module version.
-Official release binaries can embed their version at build time.
+A development build normally reports `rew dev`.
 
-Public alpha binaries are available; no stable release is available yet.
+Before following the Quick Start, set the executable path:
+
+```sh
+export REW_BIN="$(pwd)/rew"
+```
+
+The GitHub URL above is the planned repository address.
+It will become available after the GitHub migration.
+
+The earlier v0.1.0-alpha.4 release was published under
+the BuildFossil name for technical validation.
+It is not a REW binary release.
+
+## Terminal Branding
+
+REW includes an optional terminal splash screen:
+
+    rew splash
+
+The command displays the REW ASCII logo, current CLI version,
+and Docker engine label.
+
+When stdout is an interactive terminal, REW uses its
+purple, teal, and emerald TrueColor palette.
+
+Colors are disabled when stdout is redirected or when
+`NO_COLOR` is set, `CLICOLOR=0`, or `TERM=dumb`.
+
+The splash screen is not printed by `capture`, `replay`,
+or `version`, keeping normal CLI output suitable for scripts.
 
 ## Command-Line Help
 
-After building BuildFossil, you can inspect its available commands:
+After building REW, you can inspect its available commands:
 
-    ./buildfossil --help
-    ./buildfossil capture --help
-    ./buildfossil replay --help
-    ./buildfossil --version
+    ./rew --help
+    ./rew capture --help
+    ./rew replay --help
+    ./rew --version
 
 The `capture` and `replay` help commands describe the supported schema-v3
 workflow. Older experimental modes remain available but are not the
@@ -148,16 +147,16 @@ recommended starting point.
 ## Quick Start: Reproduce a Failed Build
 
 This example requires Go 1.26.6, Docker with Linux AMD64
-support, and the BuildFossil CLI installed above.
+support, and the REW CLI installed above.
 
 Create a dependency-free Go project:
 
 ```sh
-mkdir buildfossil-example
-cd buildfossil-example
+mkdir rew-example
+cd rew-example
 
 cat > go.mod <<'MOD'
-module example.com/buildfossil-quickstart
+module example.com/rew-quickstart
 
 go 1.26.0
 MOD
@@ -176,22 +175,22 @@ Capture the intentional compiler failure:
 ```sh
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOFLAGS='' \
 GOWORK=off GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off \
-"$BUILDFOSSIL_BIN" capture --v3 \
+"$REW_BIN" capture --v3 \
   --include-go-sources \
   -- go build ./...
 ```
 
-The build fails intentionally and BuildFossil saves `failure.bfc`.
+The build fails intentionally and REW saves `failure.bfc`.
 A successful capture normally returns the original build's
 nonzero exit code.
 
 No `go.sum` is required for this dependency-free example.
-BuildFossil does not create `go.sum` in the source project.
+REW does not create `go.sum` in the source project.
 
 Replay the failure using Docker:
 
 ```sh
-"$BUILDFOSSIL_BIN" replay --v3 --allow-command --memory 1g failure.bfc
+"$REW_BIN" replay --v3 --allow-command --memory 1g failure.bfc
 ```
 
 Expected output:
@@ -210,12 +209,12 @@ The [alpha.3 Quick Start validation report](docs/alpha3-quickstart-validation.md
 
 ## Automatic Go Source and Embed Discovery
 
-The published v0.1.0-alpha.4 release supports opt-in
+The current implementation supports opt-in
 `--include-go-sources` for supported Go projects.
 
 For a supported Go project, run:
 
-    "$BUILDFOSSIL_BIN" capture --v3 --include-go-sources -- go build ./...
+    "$REW_BIN" capture --v3 --include-go-sources -- go build ./...
 
 This discovers selected main-module Go source files for Linux AMD64
 and, on macOS ARM64, the capture platform. It also includes `go.mod`
@@ -229,12 +228,12 @@ Paths discovered more than once are deduplicated; duplicate explicit
 Embedded resources are separate. Add `--include-go-embed` to select
 resources referenced by `//go:embed` directives:
 
-    "$BUILDFOSSIL_BIN" capture --v3 --include-go-sources --include-go-embed -- go build ./...
+    "$REW_BIN" capture --v3 --include-go-sources --include-go-embed -- go build ./...
 
 The existing `--include-go-embed` flag also works with manual source
 inclusion in the published release:
 
-    "$BUILDFOSSIL_BIN" capture --v3 --include go.mod --include main.go --include-go-embed -- go build ./...
+    "$REW_BIN" capture --v3 --include go.mod --include main.go --include-go-embed -- go build ./...
 
 Discovery uses offline Go package metadata and does not download missing
 dependencies. It selects files recognized by the supported Go toolchain;
@@ -249,7 +248,7 @@ use it only with trusted source trees.
 includes become part of the `.bfc` capsule. Review the contents and
 avoid sharing capsules containing secrets or confidential source code.
 
-The published v0.1.0-alpha.4 schema-v3 workspace limit is
+The current schema-v3 workspace limit is
 2,048 archived files, including a virtual `go.sum` when required.
 
 ## Understanding Replay Results
@@ -259,7 +258,7 @@ Make the `.bfc` capsule available on a machine with a supported Docker environme
 Run:
 
 ```sh
-"$BUILDFOSSIL_BIN" replay --v3 --allow-command failure.bfc
+"$REW_BIN" replay --v3 --allow-command failure.bfc
 ```
 
 When Replay v3 returns `different_failure` (exit code `11`), it also
@@ -275,7 +274,7 @@ For example:
     Outcome:            different_failure
     Difference:         stderr differs
 
-BuildFossil does not print the full stderr difference. If the captured or
+REW does not print the full stderr difference. If the captured or
 replayed stderr was truncated, the comparison is `inconclusive` rather than
 claiming a complete mismatch.
 
@@ -283,7 +282,7 @@ Schema-v3 replay uses 256 MiB of container memory by default.
 
 For memory-intensive builds or AMD64 emulation on ARM64, use:
 
-    "$BUILDFOSSIL_BIN" replay --v3 --allow-command --memory 1g failure.bfc
+    "$REW_BIN" replay --v3 --allow-command --memory 1g failure.bfc
 
 Supported values: 256m, 512m, 1g, 2g. Maximum: 2 GiB.
 This option applies only to schema-v3 replay.
@@ -302,7 +301,7 @@ Replay exit code:   1
 Outcome:            reproduced
 ```
 
-`reproduced` means BuildFossil's current comparison logic considers the captured and replayed failures equivalent.
+`reproduced` means REW's current comparison logic considers the captured and replayed failures equivalent.
 
 It does not prove that every aspect of the original execution environment was reconstructed.
 
@@ -327,11 +326,11 @@ The following example creates a small Go project with one external dependency an
 Create the project:
 
 ```sh
-mkdir buildfossil-example
-cd buildfossil-example
+mkdir rew-example
+cd rew-example
 
 cat > go.mod <<'MOD'
-module example.com/buildfossil-example
+module example.com/rew-example
 
 go 1.26.0
 
@@ -386,10 +385,10 @@ Ensure no external Go workspace is active:
 export GOWORK=off
 ```
 
-Run the BuildFossil executable using the `BUILDFOSSIL_BIN` variable defined during installation:
+Run the REW executable using the `REW_BIN` variable defined during installation:
 
 ```sh
-"$BUILDFOSSIL_BIN" capture --v3 \
+"$REW_BIN" capture --v3 \
   --include go.mod \
   --include go.sum \
   --include main.go \
@@ -405,16 +404,16 @@ For example, on macOS where CGO is enabled by default, set
 `CGO_ENABLED=0` before capture.
 
 The output file `failure.bfc` is never overwritten. If it already exists,
-move or rename it before repeating Capture. BuildFossil checks this before
+move or rename it before repeating Capture. REW checks this before
 executing the build and retains exclusive file creation protection.
 
 The build is expected to fail because `undefinedFunction` does not exist.
 
-BuildFossil saves `failure.bfc` in the current working directory when the failed build satisfies the supported capture requirements.
+REW saves `failure.bfc` in the current working directory when the failed build satisfies the supported capture requirements.
 
 A successfully captured compiler failure normally preserves the original nonzero build exit code.
 
-If capture itself fails, BuildFossil may exit with code `125` and will not produce a valid new capsule.
+If capture itself fails, REW may exit with code `125` and will not produce a valid new capsule.
 
 
 ## What Is Inside a Capsule?
@@ -436,7 +435,7 @@ Integrity verification is not the same as authenticating who created a capsule.
 
 ## Security
 
-BuildFossil replays commands from captured artifacts. It must not be treated as a safe executor for arbitrary, untrusted code.
+REW replays commands from captured artifacts. It must not be treated as a safe executor for arbitrary, untrusted code.
 
 The replay implementation applies container restrictions, including disabled container networking, but Docker isolation is not a complete security boundary.
 
@@ -461,7 +460,7 @@ The current schema-v3 implementation:
 - Supports only the exact command `go build ./...`.
 - Requires Go 1.26.6.
 - Supports up to 128 selected external Go modules, including transitive dependencies, with at most 64 full ZIP modules.
-- The published v0.1.0-alpha.4 release supports opt-in
+- The current implementation supports opt-in
   `--include-go-sources` to select main-module Go source files,
   `go.mod`, and any existing `go.sum`. Manual inclusion remains
   supported. Dependency-free projects without `go.sum` are supported.
@@ -534,18 +533,18 @@ go vet ./...
 Run Docker integration tests with a working Docker daemon:
 
 ```sh
-BUILDFOSSIL_DOCKER_TEST=1 go test -p 1 -count=1 -timeout 15m ./...
+REW_DOCKER_TEST=1 go test -p 1 -count=1 -timeout 15m ./...
 ```
 
 Build the CLI:
 
 ```sh
-go build -o buildfossil ./cmd/buildfossil
+go build -o rew ./cmd/rew
 ```
 
 ## Project Status
 
-BuildFossil is in active experimental development.
+REW is in active experimental development.
 
 Public alpha releases are available for early testing. Further security review, documentation, installation testing, and compatibility validation remain necessary before a stable release.
 
@@ -561,11 +560,11 @@ Features outside the documented supported scenarios should not be assumed to wor
 
 ## Contributing
 
-BuildFossil welcomes early contributors interested in Go, DevOps, build reproducibility, container infrastructure, and developer tools.
+REW welcomes early contributors interested in Go, DevOps, build reproducibility, container infrastructure, and developer tools.
 
 Contributions can include bug reports, tests, documentation, code improvements, and technical discussions.
 
-Looking for a place to start? Explore our [open issues](https://github.com/buildfossil/buildfossil/issues), especially those labeled `good first issue` or `help wanted`.
+Looking for a place to start? Explore our [open issues](https://github.com/rewtools/rew/issues), especially those labeled `good first issue` or `help wanted`.
 
 For larger changes, please open an Issue to discuss the approach before submitting a Pull Request.
 

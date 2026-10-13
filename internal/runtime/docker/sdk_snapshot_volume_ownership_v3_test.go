@@ -15,7 +15,7 @@ import (
 )
 
 func TestSnapshotVolumeRollbackPreservesForeignVolumeV3(t *testing.T) {
-	const volumeName = "buildfossil-snapshot-foreign-volume-test"
+	const volumeName = "rew-snapshot-foreign-volume-test"
 
 	var mu sync.Mutex
 	var createCalls int
@@ -48,7 +48,7 @@ func TestSnapshotVolumeRollbackPreservesForeignVolumeV3(t *testing.T) {
 				t.Errorf("unexpected volume name: %q", request.Name)
 			}
 
-			requestedToken = request.Labels["org.buildfossil.ownership-token"]
+			requestedToken = request.Labels["org.rew.ownership-token"]
 
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -62,7 +62,7 @@ func TestSnapshotVolumeRollbackPreservesForeignVolumeV3(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = fmt.Fprintf(
 				w,
-				`{"Name":%q,"Driver":"local","Labels":{"org.buildfossil.component":"snapshot","org.buildfossil.kind":"workspace","org.buildfossil.ownership-token":"foreign-token"}}`,
+				`{"Name":%q,"Driver":"local","Labels":{"org.rew.component":"snapshot","org.rew.kind":"workspace","org.rew.ownership-token":"foreign-token"}}`,
 				volumeName,
 			)
 

@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 )
 
 // snapshotFilesV3 owns both prepared TAR readers and their private
@@ -44,7 +44,7 @@ func (s *snapshotFilesV3) Close() error {
 func prepareSnapshotFilesV3(
 	verified capsule.VerifiedCapsuleV3,
 ) (_ *snapshotFilesV3, resultErr error) {
-	directory, err := os.MkdirTemp("", "buildfossil-replay-v3-*")
+	directory, err := os.MkdirTemp("", "rew-replay-v3-*")
 	if err != nil {
 		return nil, fmt.Errorf("replay: create snapshot directory: %w", err)
 	}
@@ -121,7 +121,7 @@ func prepareSnapshotFilesV3(
 func prepareSnapshotFilesFromStoreV3(
 	verified capsule.VerifiedStoredCapsuleV3,
 ) (_ *snapshotFilesV3, resultErr error) {
-	directory, err := os.MkdirTemp("", "buildfossil-replay-v3-*")
+	directory, err := os.MkdirTemp("", "rew-replay-v3-*")
 	if err != nil {
 		return nil, fmt.Errorf("replay: create snapshot directory: %w", err)
 	}

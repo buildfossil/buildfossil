@@ -1,4 +1,4 @@
-module github.com/buildfossil/buildfossil
+module github.com/rewtools/rew
 
 go 1.26.6
 
