@@ -52,6 +52,7 @@ func run(args []string) int {
 		if len(args) >= 2 && args[1] == "--v3" {
 			var includes []string
 			includeGoEmbed := false
+			includeGoSources := false
 			i := 2
 
 			for i < len(args) {
@@ -66,6 +67,15 @@ func run(args []string) int {
 					}
 					includes = append(includes, args[i+1])
 					i += 2
+
+				case "--include-go-sources":
+					if includeGoSources {
+						fmt.Fprintln(os.Stderr,
+							"buildfossil: duplicate --include-go-sources")
+						return 2
+					}
+					includeGoSources = true
+					i++
 
 				case "--include-go-embed":
 					if includeGoEmbed {
@@ -82,22 +92,24 @@ func run(args []string) int {
 			}
 		captureV3OptionsDone:
 
-			if len(includes) == 0 ||
+			if (!includeGoSources && len(includes) == 0) ||
 				i >= len(args) ||
 				args[i] != "--" ||
 				i+1 >= len(args) {
 				fmt.Fprintln(os.Stderr,
 					"Usage: buildfossil capture --v3 "+
-						"--include <file> ... -- <command> [args...]")
+						"[--include <file> ... | --include-go-sources] "+
+						"[--include-go-embed] -- <command> [args...]")
 				return 2
 			}
 
-			return captureCommandV3WithEmbed(
+			return captureCommandV3WithDiscovery(
 				args[i+1:],
 				".",
 				includes,
 				"failure.bfc",
 				includeGoEmbed,
+				includeGoSources,
 			)
 		}
 

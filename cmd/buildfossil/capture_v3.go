@@ -26,6 +26,20 @@ func captureCommandV3(
 	)
 }
 
+func captureCommandV3WithDiscovery(
+	argv []string,
+	workspaceRoot string,
+	includes []string,
+	output string,
+	includeGoEmbed bool,
+	includeGoSources bool,
+) int {
+	return captureCommandV3WithOptions(
+		argv, workspaceRoot, includes, output,
+		includeGoEmbed, includeGoSources,
+	)
+}
+
 func captureCommandV3WithEmbed(
 	argv []string,
 	workspaceRoot string,
@@ -33,7 +47,21 @@ func captureCommandV3WithEmbed(
 	output string,
 	includeGoEmbed bool,
 ) int {
-	if len(argv) == 0 || len(includes) == 0 {
+	return captureCommandV3WithOptions(
+		argv, workspaceRoot, includes, output,
+		includeGoEmbed, false,
+	)
+}
+
+func captureCommandV3WithOptions(
+	argv []string,
+	workspaceRoot string,
+	includes []string,
+	output string,
+	includeGoEmbed bool,
+	includeGoSources bool,
+) int {
+	if len(argv) == 0 || (!includeGoSources && len(includes) == 0) {
 		fmt.Fprintln(os.Stderr,
 			"buildfossil: v3 requires a command and --include files")
 		return 2
@@ -75,6 +103,92 @@ func captureCommandV3WithEmbed(
 		fmt.Fprintf(os.Stderr,
 			"buildfossil: capture output: %v\n", err)
 		return 125
+	}
+
+	if includeGoSources {
+		cacheCommand := exec.Command("go", "env", "GOMODCACHE")
+		cacheCommand.Dir = workspaceRoot
+		cacheOutput, err := cacheCommand.Output()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "buildfossil: resolve Go module cache: %v\n", err)
+			return 125
+		}
+
+		moduleCacheRoot := strings.TrimSpace(string(cacheOutput))
+		if moduleCacheRoot == "" {
+			fmt.Fprintln(os.Stderr, "buildfossil: empty Go module cache")
+			return 125
+		}
+
+		discovered, err := capsule.DiscoverGoSourceFilesV3(
+			workspaceRoot, moduleCacheRoot, goBuildEnv,
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "buildfossil: discover Go sources: %v\n", err)
+			return 125
+		}
+
+		seen := make(map[string]struct{}, len(includes)+len(discovered)+2)
+		merged := make([]string, 0, len(includes)+len(discovered)+2)
+
+		add := func(name string) error {
+			if _, exists := seen[name]; exists {
+				return nil
+			}
+			if len(merged) >= capsule.MaxWorkspaceV3Files {
+				return fmt.Errorf("workspace file limit exceeded")
+			}
+			seen[name] = struct{}{}
+			merged = append(merged, name)
+			return nil
+		}
+
+		for _, name := range includes {
+			if _, exists := seen[name]; exists {
+				fmt.Fprintf(os.Stderr, "buildfossil: duplicate explicit include: %q\n", name)
+				return 125
+			}
+			if err := add(name); err != nil {
+				fmt.Fprintf(os.Stderr, "buildfossil: %v\n", err)
+				return 125
+			}
+		}
+
+		for _, name := range discovered {
+			if err := add(name); err != nil {
+				fmt.Fprintf(os.Stderr, "buildfossil: %v\n", err)
+				return 125
+			}
+		}
+
+		if err := add("go.mod"); err != nil {
+			fmt.Fprintf(os.Stderr, "buildfossil: %v\n", err)
+			return 125
+		}
+
+		sumPath := filepath.Join(workspaceRoot, "go.sum")
+		if info, err := os.Lstat(sumPath); err == nil {
+			if !info.Mode().IsRegular() {
+				fmt.Fprintln(os.Stderr, "buildfossil: go.sum is not a regular file")
+				return 125
+			}
+			if err := add("go.sum"); err != nil {
+				fmt.Fprintf(os.Stderr, "buildfossil: %v\n", err)
+				return 125
+			}
+		} else if !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "buildfossil: inspect go.sum: %v\n", err)
+			return 125
+		}
+
+		fmt.Fprintf(os.Stderr,
+			"buildfossil: Go source discovery selected %d source files\n",
+			len(discovered),
+		)
+		fmt.Fprintln(os.Stderr,
+			"buildfossil: WARNING: selected source files will be stored in the capsule; review sensitive content before sharing")
+
+		includes = merged
 	}
 
 	if includeGoEmbed {
