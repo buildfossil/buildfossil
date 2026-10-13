@@ -322,9 +322,9 @@ Diagnostic output is limited to 16 KiB per stderr stream.
 Truncation is explicitly indicated. Stderr may contain sensitive data.
 
 This option does not change the strict comparison, outcome, or exit code.
- If the captured or
-replayed stderr was truncated, the comparison is `inconclusive` rather than
-claiming a complete mismatch.
+
+If the captured or replayed stderr was truncated, the comparison is
+`inconclusive` rather than claiming a complete mismatch.
 
 Schema-v3 replay uses 256 MiB of container memory by default.
 
