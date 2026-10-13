@@ -86,32 +86,61 @@ Replay containers run without network access. The Docker host may still need net
 
 ## Install
 
-REW has not yet been publicly released under its new name.
-Until the first REW release, build the CLI from source.
+The first public REW prerelease is
+[v0.1.0-alpha.5](https://github.com/rewtools/rew/releases/tag/v0.1.0-alpha.5).
 
-Requirements: Go 1.26.6 and a supported development platform.
+Prebuilt binaries are available for macOS ARM64 and Linux AMD64.
+
+Download and verify the published binary:
+
+```sh
+VERSION=v0.1.0-alpha.5
+BASE="https://github.com/rewtools/rew/releases/download/$VERSION"
+
+case "$(uname -s)/$(uname -m)" in
+  Darwin/arm64) PLATFORM=darwin_arm64 ;;
+  Linux/x86_64) PLATFORM=linux_amd64 ;;
+  *)
+    echo "Unsupported platform" >&2
+    exit 1
+    ;;
+esac
+
+mkdir rew-install
+cd rew-install
+
+curl -fL --retry 3 -O "$BASE/rew_${VERSION}_${PLATFORM}.tar.gz"
+curl -fL --retry 3 -O "$BASE/SHA256SUMS"
+
+grep -F "  ./rew_${VERSION}_${PLATFORM}.tar.gz" SHA256SUMS > selected.sha256
+test -s selected.sha256
+
+if command -v shasum >/dev/null 2>&1; then
+  shasum -a 256 -c selected.sha256
+else
+  sha256sum -c selected.sha256
+fi
+
+tar -xzf "rew_${VERSION}_${PLATFORM}.tar.gz"
+./rew version
+
+export REW_BIN="$(pwd)/rew"
+```
+
+For development builds, Go 1.26.6 is required:
 
 ```sh
 git clone https://github.com/rewtools/rew.git
 cd rew
 go build -o rew ./cmd/rew
 ./rew version
-```
-
-A development build normally reports `rew dev`.
-
-Before following the Quick Start, set the executable path:
-
-```sh
 export REW_BIN="$(pwd)/rew"
 ```
 
-The GitHub URL above is the planned repository address.
-It will become available after the GitHub migration.
+Development builds normally report `rew dev`.
 
-The earlier v0.1.0-alpha.4 release was published under
-the BuildFossil name for technical validation.
-It is not a REW binary release.
+SHA-256 verifies archive integrity against the downloaded manifest.
+It does not independently authenticate the publisher.
 
 ## Terminal Branding
 
@@ -205,7 +234,7 @@ Replay memory:      1 GiB
 Only replay capsules from trusted sources. Replay executes
 the command recorded inside the capsule.
 
-The [alpha.3 Quick Start validation report](docs/alpha3-quickstart-validation.md) documents a maintainer-operated test of the earlier manual-inclusion workflow. It does not validate this updated alpha.4 Quick Start or constitute independent external-user validation.
+The [alpha.3 Quick Start validation report](docs/alpha3-quickstart-validation.md) documents an earlier maintainer-operated workflow. The v0.1.0-alpha.5 public binary has also been tested by the maintainers against a minimal Go project and a controlled compiler failure in spf13/cobra. This is not independent external-user validation.
 
 ## Automatic Go Source and Embed Discovery
 
