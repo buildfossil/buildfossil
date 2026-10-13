@@ -24,7 +24,7 @@ jobs:
 
       - name: Check formatting
         run: |
-          files="$(gofmt -l ./cmd ./internal)"
+          files="$(find cmd internal -name '*.go' -type f -exec gofmt -l {} +)"
           if [ -n "$files" ]; then
             echo "$files"
             exit 1
@@ -313,20 +313,26 @@ jobs:
 
           cd testdata/cross-platform-go
 
+          capture_stdout="$RUNNER_TEMP/cross-platform-capture.stdout"
+          capture_stderr="$RUNNER_TEMP/cross-platform-capture.stderr"
+
           set +e
           ../../rew capture \
             --include go.mod \
             --include main.go \
-            -- go build ./...
+            -- go build ./... \
+            > "$capture_stdout" 2> "$capture_stderr"
           capture_exit=$?
           set -e
 
-          if [ "$capture_exit" -ne 1 ]; then
-            echo "Unexpected capture exit: $capture_exit"
+          if [ "$capture_exit" -ne 1 ] || [ ! -s failure.bfc ]; then
+            echo "Cross-platform capture failed validation (exit=$capture_exit)"
+            cat "$capture_stdout"
+            cat "$capture_stderr" >&2
             exit 1
           fi
 
-          test -s failure.bfc
+          echo "Expected compiler failure captured successfully"
           cp failure.bfc "$RUNNER_TEMP/cross-platform-go.bfc"
 
           echo "macOS capsule created successfully"
@@ -444,23 +450,27 @@ jobs:
           export GOPROXY=off
           export GOSUMDB=off
 
+          capture_stdout="$RUNNER_TEMP/v3-capture.stdout"
+          capture_stderr="$RUNNER_TEMP/v3-capture.stderr"
+
           set +e
           ../../rew capture --v3 \
             --include go.mod \
             --include go.sum \
             --include main.go \
-            -- go build ./...
+            -- go build ./... \
+            > "$capture_stdout" 2> "$capture_stderr"
           capture_exit=$?
           set -e
 
-          echo "Capture exit code: $capture_exit"
-
-          if [ "$capture_exit" -ne 1 ]; then
-            echo "Expected original Go compilation failure"
+          if [ "$capture_exit" -ne 1 ] || [ ! -s failure.bfc ]; then
+            echo "Schema-v3 capture failed validation (exit=$capture_exit)"
+            cat "$capture_stdout"
+            cat "$capture_stderr" >&2
             exit 1
           fi
 
-          test -s failure.bfc
+          echo "Expected schema-v3 compiler failure captured successfully"
 
           cp failure.bfc "$RUNNER_TEMP/rew-v3.bfc"
 
