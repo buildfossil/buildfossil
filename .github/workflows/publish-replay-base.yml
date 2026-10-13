@@ -29,4 +29,4 @@ jobs:
           file: ./images/replay-base/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/buildfossil/replay-base:0.1.0
+          tags: ghcr.io/rewtools/replay-base:0.1.0
