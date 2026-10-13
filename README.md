@@ -1,10 +1,10 @@
 <div align="center">
 
   <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/img/dark_logo.png">
-  <source media="(prefers-color-scheme: light)" srcset="assets/img/light_logo.png">
-  <img src="assets/img/light_logo.png" alt="REW logo" width="340">
-</picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./assets/img/dark_logo.png">
+    <source media="(prefers-color-scheme: light)" srcset="./assets/img/light_logo.png">
+    <img src="./assets/img/light_logo.png" alt="REW" width="380">
+  </picture>
 
   <h3>Capture a failed Go build. Replay the failure offline.</h3>
 
@@ -27,6 +27,14 @@ REW is an experimental open-source CLI that packages a failed Go build, selected
 The capsule can then be replayed inside a constrained Linux Docker container without network access from the container.
 
 > **Status:** Experimental engineering prototype. Not production-ready.
+
+## Demo
+
+Real terminal recording of REW v0.1.0-alpha.5 capturing and replaying a controlled compiler failure in [spf13/cobra](https://github.com/spf13/cobra).
+
+![REW capture and replay](assets/demo/rew-alpha5-demo.gif)
+
+The compiler error was intentionally introduced for this demonstration. REW does not support arbitrary CI job replay.
 
 ## Why REW?
 
