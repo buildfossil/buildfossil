@@ -62,11 +62,13 @@ The development version currently reports `rew dev`.
 
 ### Run Tests
 
-Run all ordinary Go tests:
+Run the ordinary Go test suite without requiring Docker:
 
 ```sh
 go test -count=1 ./...
 ```
+
+Docker-dependent tests are skipped unless explicitly enabled.
 
 Run static analysis:
 
@@ -77,7 +79,7 @@ go vet ./...
 Check formatting:
 
 ```sh
-gofmt -l ./cmd ./internal
+find cmd internal -name '*.go' -type f -exec gofmt -l {} +
 ```
 
 Run Docker-dependent integration tests when Docker is available:
@@ -86,7 +88,10 @@ Run Docker-dependent integration tests when Docker is available:
 REW_DOCKER_TEST=1 go test -p 1 -count=1 -timeout 15m ./...
 ```
 
-Docker-dependent tests may pull the pinned replay image. Check that Docker is running and your machine supports the required architecture.
+Docker-dependent tests require a running Docker daemon and Linux AMD64
+container execution support. These tests may pull the pinned replay image,
+so the host may need network access before offline replay can run.
+Docker is not required to build the CLI or run the ordinary test suite.
 
 ## Development Workflow
 
