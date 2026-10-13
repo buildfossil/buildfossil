@@ -18,26 +18,31 @@ import (
 // The store must remain open and must not be concurrently modified.
 // As with other temporary-file verification, this does not defend
 // against an attacker with arbitrary access under the same OS UID.
-func verifyGoModuleFromStoreV3(
+func verifyGoModuleFromStoreV3(mod GoModuleV3, index int, goSum []byte, store *ArtifactStoreV3) error {
+	_, err := verifyGoModuleFromStoreMeasuredV3(mod, index, goSum, store)
+	return err
+}
+
+func verifyGoModuleFromStoreMeasuredV3(
 	mod GoModuleV3,
 	index int,
 	goSum []byte,
 	store *ArtifactStoreV3,
-) error {
+) (int64, error) {
 	if store == nil || store.closed {
-		return fmt.Errorf("capsule: module artifact store unavailable")
+		return 0, fmt.Errorf("capsule: module artifact store unavailable")
 	}
 
 	if index < 1 || index > MaxGoModulesV3 {
-		return fmt.Errorf("capsule: invalid Go module index")
+		return 0, fmt.Errorf("capsule: invalid Go module index")
 	}
 
 	if err := module.Check(mod.Path, mod.Version); err != nil {
-		return fmt.Errorf("capsule: invalid Go module identity: %w", err)
+		return 0, fmt.Errorf("capsule: invalid Go module identity: %w", err)
 	}
 
 	if len(mod.Artifacts) != MaxGoModuleArtifactsV3 {
-		return fmt.Errorf("capsule: invalid Go artifact count")
+		return 0, fmt.Errorf("capsule: invalid Go artifact count")
 	}
 
 	prefix := fmt.Sprintf("module-%04d", index)
@@ -54,7 +59,7 @@ func verifyGoModuleFromStoreV3(
 	for _, metadata := range mod.Artifacts {
 		seen, ok := names[metadata.Path]
 		if !ok || seen {
-			return fmt.Errorf(
+			return 0, fmt.Errorf(
 				"capsule: invalid Go artifact path %q", metadata.Path,
 			)
 		}
@@ -62,27 +67,27 @@ func verifyGoModuleFromStoreV3(
 
 		if metadata.Size < 0 ||
 			metadata.Size > MaxGoModuleTotalSizeV3-total {
-			return fmt.Errorf("capsule: Go artifact size limit exceeded")
+			return 0, fmt.Errorf("capsule: Go artifact size limit exceeded")
 		}
 		total += metadata.Size
 
 		if !strings.HasPrefix(metadata.SHA256, "sha256:") ||
 			len(metadata.SHA256) != len("sha256:")+64 {
-			return fmt.Errorf("capsule: invalid Go artifact SHA-256")
+			return 0, fmt.Errorf("capsule: invalid Go artifact SHA-256")
 		}
 
 		record, ok := store.names[metadata.Path]
 		if !ok ||
 			record.size != metadata.Size ||
 			record.digest != strings.TrimPrefix(metadata.SHA256, "sha256:") {
-			return fmt.Errorf(
+			return 0, fmt.Errorf(
 				"capsule: Go artifact metadata mismatch %q", metadata.Path,
 			)
 		}
 
 		file, err := store.Open(metadata.Path)
 		if err != nil {
-			return fmt.Errorf(
+			return 0, fmt.Errorf(
 				"capsule: open verified Go artifact %q: %w",
 				metadata.Path, err,
 			)
@@ -116,7 +121,7 @@ func verifyGoModuleFromStoreV3(
 		}
 
 		if err != nil {
-			return fmt.Errorf(
+			return 0, fmt.Errorf(
 				"capsule: read verified artifact %q: %w",
 				metadata.Path, err,
 			)
@@ -125,39 +130,39 @@ func verifyGoModuleFromStoreV3(
 
 	for name, seen := range names {
 		if !seen {
-			return fmt.Errorf("capsule: missing Go artifact %q", name)
+			return 0, fmt.Errorf("capsule: missing Go artifact %q", name)
 		}
 	}
 
 	parsed, err := modfile.Parse("go.mod", modData, nil)
 	if err != nil {
-		return fmt.Errorf("capsule: invalid module go.mod: %w", err)
+		return 0, fmt.Errorf("capsule: invalid module go.mod: %w", err)
 	}
 	if parsed.Module == nil || parsed.Module.Mod.Path != mod.Path {
-		return fmt.Errorf("capsule: module path mismatch")
+		return 0, fmt.Errorf("capsule: module path mismatch")
 	}
 
 	var info struct {
 		Version string `json:"Version"`
 	}
 	if err := json.Unmarshal(infoData, &info); err != nil {
-		return fmt.Errorf("capsule: invalid module info: %w", err)
+		return 0, fmt.Errorf("capsule: invalid module info: %w", err)
 	}
 	if info.Version != mod.Version {
-		return fmt.Errorf("capsule: module version mismatch")
+		return 0, fmt.Errorf("capsule: module version mismatch")
 	}
 
 	zipFile, err := store.Open(zipName)
 	if err != nil {
-		return fmt.Errorf("capsule: open module ZIP: %w", err)
+		return 0, fmt.Errorf("capsule: open module ZIP: %w", err)
 	}
 	defer zipFile.Close()
 
-	zipHash, err := verifyGoModuleZipFileV3(
+	zipHash, unpackedSize, err := verifyGoModuleZipFileMeasuredV3(
 		zipFile.Name(), mod, modData,
 	)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	modHash, err := dirhash.Hash1(
@@ -170,20 +175,20 @@ func verifyGoModuleFromStoreV3(
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("capsule: hash module go.mod: %w", err)
+		return 0, fmt.Errorf("capsule: hash module go.mod: %w", err)
 	}
 
 	if err := verifyGoSumEntry(
 		goSum, mod.Path+" "+mod.Version, zipHash,
 	); err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := verifyGoSumEntry(
 		goSum, mod.Path+" "+mod.Version+"/go.mod", modHash,
 	); err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return unpackedSize, nil
 }

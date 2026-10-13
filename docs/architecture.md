@@ -166,8 +166,9 @@ mounted read-only in the execution container. The replay container
 runs without network access.
 
 The schema-v3 capsule limit is 96 MiB. Complete Go module artifacts
-have a combined 64 MiB budget, with an additional 16 MiB unpacked
-content limit per module.
+have a combined 64 MiB budget. Verified ZIP contents are limited to
+48 MiB unpacked per module and 256 MiB unpacked across all selected
+complete Go modules.
 
 These mechanisms reduce resource usage and mitigate specific filesystem
 race risks, but they do not make arbitrary untrusted capsules safe to
