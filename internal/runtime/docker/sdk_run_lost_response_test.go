@@ -14,7 +14,7 @@ import (
 )
 
 func TestStandardExecutionContainerLostCreateResponse(t *testing.T) {
-	const containerID = "buildfossil-standard-execution-test-id"
+	const containerID = "rew-standard-execution-test-id"
 	const runID = "0123456789abcdef0123456789abcdef"
 
 	var mu sync.Mutex
@@ -45,8 +45,8 @@ func TestStandardExecutionContainerLostCreateResponse(t *testing.T) {
 				return
 			}
 
-			ownershipToken = request.Labels["org.buildfossil.ownership-token"]
-			observedRunID = request.Labels["org.buildfossil.run-id"]
+			ownershipToken = request.Labels["org.rew.ownership-token"]
+			observedRunID = request.Labels["org.rew.run-id"]
 
 			hijacker, ok := w.(http.Hijacker)
 			if !ok {
@@ -79,7 +79,7 @@ func TestStandardExecutionContainerLostCreateResponse(t *testing.T) {
 
 			_, _ = fmt.Fprintf(
 				w,
-				`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.buildfossil.component":"replay","org.buildfossil.ownership-token":%q}}}`,
+				`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.rew.component":"replay","org.rew.ownership-token":%q}}}`,
 				containerID,
 				"/"+containerName,
 				ownershipToken,
@@ -127,7 +127,7 @@ func TestStandardExecutionContainerLostCreateResponse(t *testing.T) {
 		[]string{"/bin/sh", "-c", "true"},
 		"10001:10001",
 	)
-	options.Config.Labels["org.buildfossil.run-id"] = runID
+	options.Config.Labels["org.rew.run-id"] = runID
 
 	created, err := createStandardExecutionContainer(
 		context.Background(),
@@ -149,7 +149,7 @@ func TestStandardExecutionContainerLostCreateResponse(t *testing.T) {
 	if observedRunID != runID {
 		t.Fatalf("run ID label changed: %q", observedRunID)
 	}
-	if containerName != "buildfossil-replay-exec-"+runID {
+	if containerName != "rew-replay-exec-"+runID {
 		t.Fatalf("unexpected execution container name: %q", containerName)
 	}
 	if ownershipToken != runID {

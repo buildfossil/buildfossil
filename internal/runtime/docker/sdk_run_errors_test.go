@@ -78,8 +78,8 @@ func TestStandardExecutionCreateErrorHandling(t *testing.T) {
 							return
 						}
 
-						observedRunID = request.Labels["org.buildfossil.run-id"]
-						observedToken = request.Labels["org.buildfossil.ownership-token"]
+						observedRunID = request.Labels["org.rew.run-id"]
+						observedToken = request.Labels["org.rew.ownership-token"]
 
 						w.Header().Set("Content-Type", "application/json")
 						w.WriteHeader(http.StatusInternalServerError)
@@ -112,7 +112,7 @@ func TestStandardExecutionCreateErrorHandling(t *testing.T) {
 						w.Header().Set("Content-Type", "application/json")
 						_, _ = fmt.Fprintf(
 							w,
-							`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.buildfossil.component":"replay","org.buildfossil.ownership-token":%q}}}`,
+							`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.rew.component":"replay","org.rew.ownership-token":%q}}}`,
 							containerID,
 							"/"+observedName,
 							token,
@@ -164,7 +164,7 @@ func TestStandardExecutionCreateErrorHandling(t *testing.T) {
 				[]string{"/bin/sh", "-c", "true"},
 				"10001:10001",
 			)
-			options.Config.Labels["org.buildfossil.run-id"] = runID
+			options.Config.Labels["org.rew.run-id"] = runID
 
 			created, err := createStandardExecutionContainer(
 				context.Background(),
@@ -193,7 +193,7 @@ func TestStandardExecutionCreateErrorHandling(t *testing.T) {
 			mu.Lock()
 			defer mu.Unlock()
 
-			if observedName != "buildfossil-replay-exec-"+runID ||
+			if observedName != "rew-replay-exec-"+runID ||
 				observedRunID != runID ||
 				observedToken != runID {
 				t.Fatalf(

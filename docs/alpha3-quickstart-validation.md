@@ -1,9 +1,9 @@
-# BuildFossil alpha.3 Public Quick Start Validation
+# REW alpha.3 Public Quick Start Validation
 
 ## Scope
 
 This report records a manual end-to-end test of the published
-BuildFossil v0.1.0-alpha.3 binary on October 12, 2026.
+REW v0.1.0-alpha.3 binary on October 12, 2026.
 
 The test followed the dependency-free Quick Start documented in
 the repository README.
@@ -18,13 +18,13 @@ user validation.
 - Docker Client: 29.6.2
 - Docker Server: 29.6.2
 - Docker engine: Linux ARM64
-- BuildFossil: published v0.1.0-alpha.3 macOS ARM64 binary
+- REW: published v0.1.0-alpha.3 macOS ARM64 binary
 - Replay target: Linux AMD64 via Docker
 - Replay memory limit: 1 GiB
 
 ## Test Scenario
 
-A new temporary Go workspace was created outside the BuildFossil
+A new temporary Go workspace was created outside the REW
 source repository.
 
 The project contained a go.mod file and a main.go file with
@@ -75,7 +75,7 @@ The published alpha.3 binary successfully captured and replayed
 the intentional compiler failure in the tested environment.
 
 The test exercised the public binary rather than a locally built
-BuildFossil executable.
+REW executable.
 
 This confirms the documented Quick Start scenario for this
 specific environment. It does not establish compatibility with

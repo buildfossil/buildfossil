@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 )
 
 func TestValidatePortableGoReplay(t *testing.T) {

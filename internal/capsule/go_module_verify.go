@@ -117,7 +117,7 @@ func verifyGoModuleArtifactsAtIndexV3(
 
 	// Check the module ZIP on disk using the same x/mod package
 	// that defines the Go module archive constraints.
-	tmpDir, err := os.MkdirTemp("", "buildfossil-module-verify-*")
+	tmpDir, err := os.MkdirTemp("", "rew-module-verify-*")
 	if err != nil {
 		return err
 	}

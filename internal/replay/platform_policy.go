@@ -3,7 +3,7 @@ package replay
 import (
 	"fmt"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 )
 
 func validateReplayPlatform(manifest capsule.Manifest) error {

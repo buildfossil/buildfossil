@@ -3,7 +3,7 @@ package replay
 import (
 	"testing"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 )
 
 func TestPortableGoReplayCrossBuildV3(t *testing.T) {

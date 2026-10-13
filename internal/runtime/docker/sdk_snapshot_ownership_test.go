@@ -62,7 +62,7 @@ func TestCleanupUnknownPreparationContainerOwnership(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			const containerName = "buildfossil-snapshot-prep-test"
+			const containerName = "rew-snapshot-prep-test"
 			const containerID = "mock-owned-container-id"
 			const expectedToken = "expected-token"
 
@@ -96,7 +96,7 @@ func TestCleanupUnknownPreparationContainerOwnership(t *testing.T) {
 						w.Header().Set("Content-Type", "application/json")
 						_, _ = fmt.Fprintf(
 							w,
-							`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.buildfossil.component":%q,"org.buildfossil.ownership-token":%q}}}`,
+							`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.rew.component":%q,"org.rew.ownership-token":%q}}}`,
 							containerID,
 							inspectName,
 							component,

@@ -82,7 +82,7 @@ func TestSnapshotExecutionCreateErrorPropagation(t *testing.T) {
 						w.Header().Set("Content-Type", "application/json")
 						_, _ = fmt.Fprintf(
 							w,
-							`{"Id":"foreign-container-id","Name":%q,"Config":{"Labels":{"org.buildfossil.component":"replay","org.buildfossil.ownership-token":%q}}}`,
+							`{"Id":"foreign-container-id","Name":%q,"Config":{"Labels":{"org.rew.component":"replay","org.rew.ownership-token":%q}}}`,
 							"/"+name,
 							token,
 						)
@@ -182,7 +182,7 @@ func TestSnapshotExecutionCreateAndRemoveErrors(t *testing.T) {
 					return
 				}
 
-				ownershipToken = request.Labels["org.buildfossil.ownership-token"]
+				ownershipToken = request.Labels["org.rew.ownership-token"]
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusInternalServerError)
@@ -205,7 +205,7 @@ func TestSnapshotExecutionCreateAndRemoveErrors(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = fmt.Fprintf(
 					w,
-					`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.buildfossil.component":"replay","org.buildfossil.ownership-token":%q}}}`,
+					`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.rew.component":"replay","org.rew.ownership-token":%q}}}`,
 					containerID,
 					"/"+containerName,
 					ownershipToken,

@@ -14,7 +14,7 @@ import (
 )
 
 func TestSDKContainerCleanup(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -80,7 +80,7 @@ func TestSDKContainerCleanup(t *testing.T) {
 }
 
 func TestSDKContainerCleanupOnCancellation(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 

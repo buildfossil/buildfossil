@@ -1,12 +1,12 @@
 name: Bug Report
-description: Report a reproducible BuildFossil bug
+description: Report a reproducible REW bug
 title: "bug: "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for helping improve BuildFossil.
+        Thank you for helping improve REW.
 
         Please do not disclose security vulnerabilities here.
         Follow SECURITY.md for private vulnerability reporting.
@@ -14,8 +14,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: BuildFossil version or commit
-      placeholder: "buildfossil dev / commit SHA"
+      label: REW version or commit
+      placeholder: "rew dev / commit SHA"
     validations:
       required: true
 

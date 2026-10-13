@@ -1,8 +1,8 @@
-# BuildFossil Security Policy
+# REW Security Policy
 
 ## Project Status
 
-BuildFossil is an experimental infrastructure tool.
+REW is an experimental infrastructure tool.
 
 It is not production-ready, has not undergone a comprehensive security audit, and must not be used as a security boundary for arbitrary or untrusted workloads.
 
@@ -46,7 +46,7 @@ The primary assets are:
 
 ### Trust Boundaries
 
-BuildFossil crosses several trust boundaries:
+REW crosses several trust boundaries:
 
 1. **Capture host to capsule:** selected files, command metadata, and diagnostic output are serialized into a `.bfc` archive.
 2. **Capsule to replay process:** archive contents are parsed and
@@ -97,7 +97,7 @@ However:
 - A valid manifest can describe an intentionally harmful execution.
 - Integrity checking does not prevent every possible race or runtime exploit.
 
-BuildFossil does not currently provide signed capsules, trusted publisher identities, or an authenticated provenance system.
+REW does not currently provide signed capsules, trusted publisher identities, or an authenticated provenance system.
 
 ## Docker Isolation
 
@@ -114,7 +114,7 @@ Important limitations:
 - Resource limits do not eliminate every denial-of-service risk.
 - The replay host may access the network to retrieve the pinned image, even though the replay container has networking disabled.
 
-Do not use BuildFossil as a sandbox for hostile code.
+Do not use REW as a sandbox for hostile code.
 
 ## Host Filesystem and Replay Snapshots
 
@@ -177,7 +177,7 @@ Sensitive data may appear in logs, arguments, or source files even when it was n
 
 Do not upload or share `.bfc` files containing confidential information.
 
-BuildFossil does not currently promise comprehensive secret detection or redaction.
+REW does not currently promise comprehensive secret detection or redaction.
 
 ## Safe Usage Guidelines
 
@@ -186,7 +186,7 @@ For the current experimental version:
 1. Capture only projects and files you are authorized to handle.
 2. Review included files and recorded diagnostics before sharing capsules.
 3. Replay only capsules from sources you trust.
-4. Do not run BuildFossil with production credentials.
+4. Do not run REW with production credentials.
 5. Avoid privileged Docker configurations.
 6. Keep Docker, the operating system, and Go toolchain updated.
 7. Use a dedicated disposable development environment for higher-risk testing.
@@ -216,6 +216,6 @@ Before a stable release, the project should continue addressing:
 
 ## Disclaimer
 
-BuildFossil is provided as experimental software under the repository's license.
+REW is provided as experimental software under the repository's license.
 
 Do not interpret successful tests, checksums, or Docker restrictions as a guarantee that replaying a capsule is safe.

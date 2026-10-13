@@ -14,8 +14,8 @@ import (
 
 func TestSnapshotCloseDefersVolumeRemovalAfterContainerFailureV3(t *testing.T) {
 	const (
-		containerID = "buildfossil-preparation-cleanup-test"
-		volumeName  = "buildfossil-snapshot-cleanup-test"
+		containerID = "rew-preparation-cleanup-test"
+		volumeName  = "rew-snapshot-cleanup-test"
 		token       = "expected-volume-ownership-token"
 	)
 
@@ -49,9 +49,9 @@ func TestSnapshotCloseDefersVolumeRemovalAfterContainerFailureV3(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(map[string]any{
 					"Name": volumeName,
 					"Labels": map[string]string{
-						"org.buildfossil.component":       "snapshot",
-						"org.buildfossil.kind":            "workspace",
-						"org.buildfossil.ownership-token": token,
+						"org.rew.component":       "snapshot",
+						"org.rew.kind":            "workspace",
+						"org.rew.ownership-token": token,
 					},
 				})
 
@@ -146,8 +146,8 @@ func TestSnapshotCloseDefersVolumeRemovalAfterContainerFailureV3(t *testing.T) {
 // 404 for its recorded ID must not permanently block volume cleanup.
 func TestSnapshotCloseHandlesAlreadyRemovedPreparationContainerV3(t *testing.T) {
 	const (
-		containerID = "buildfossil-preparation-already-removed-test"
-		volumeName  = "buildfossil-snapshot-already-removed-test"
+		containerID = "rew-preparation-already-removed-test"
+		volumeName  = "rew-snapshot-already-removed-test"
 		token       = "expected-already-removed-token"
 	)
 
@@ -174,9 +174,9 @@ func TestSnapshotCloseHandlesAlreadyRemovedPreparationContainerV3(t *testing.T) 
 				_ = json.NewEncoder(w).Encode(map[string]any{
 					"Name": volumeName,
 					"Labels": map[string]string{
-						"org.buildfossil.component":       "snapshot",
-						"org.buildfossil.kind":            "workspace",
-						"org.buildfossil.ownership-token": token,
+						"org.rew.component":       "snapshot",
+						"org.rew.kind":            "workspace",
+						"org.rew.ownership-token": token,
 					},
 				})
 

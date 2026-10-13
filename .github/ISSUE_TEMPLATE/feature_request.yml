@@ -1,12 +1,12 @@
 name: Feature Request
-description: Suggest an improvement to BuildFossil
+description: Suggest an improvement to REW
 title: "feat: "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        BuildFossil is experimental and intentionally supports
+        REW is experimental and intentionally supports
         a narrow set of build configurations.
 
         Please describe the problem before proposing a solution.

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/buildfossil/buildfossil/internal/runtime/docker"
+	"github.com/rewtools/rew/internal/runtime/docker"
 )
 
 func TestBoundedOutputTruncation(t *testing.T) {
@@ -52,7 +52,7 @@ func TestBoundedOutputTruncation(t *testing.T) {
 }
 
 func TestReplayOutputTruncationWithDocker(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 

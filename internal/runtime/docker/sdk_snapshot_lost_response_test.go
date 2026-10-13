@@ -26,9 +26,9 @@ func TestSnapshotPreparationContainerLostCreateResponse(t *testing.T) {
 	containerName := ""
 	ownershipToken := ""
 
-	const containerID = "buildfossil-test-container-id"
+	const containerID = "rew-test-container-id"
 
-	const volumeName = "buildfossil-snapshot-lost-response-test"
+	const volumeName = "rew-snapshot-lost-response-test"
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
@@ -77,7 +77,7 @@ func TestSnapshotPreparationContainerLostCreateResponse(t *testing.T) {
 				t.Errorf("decode container create request: %v", err)
 				return
 			}
-			ownershipToken = request.Labels["org.buildfossil.ownership-token"]
+			ownershipToken = request.Labels["org.rew.ownership-token"]
 
 			hijacker, ok := w.(http.Hijacker)
 			if !ok {
@@ -103,7 +103,7 @@ func TestSnapshotPreparationContainerLostCreateResponse(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = fmt.Fprintf(
 				w,
-				`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.buildfossil.component":"replay","org.buildfossil.ownership-token":%q}}}`,
+				`{"Id":%q,"Name":%q,"Config":{"Labels":{"org.rew.component":"replay","org.rew.ownership-token":%q}}}`,
 				containerID, "/"+containerName, ownershipToken,
 			)
 

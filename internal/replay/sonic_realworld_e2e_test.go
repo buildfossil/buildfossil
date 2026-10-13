@@ -12,11 +12,11 @@ import (
 //
 // Requires an explicitly supplied, trusted local capsule.
 func TestSonicRealWorldOfflineReplayV3(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration tests disabled")
 	}
 
-	filename := os.Getenv("BUILDFOSSIL_SONIC_CAPSULE")
+	filename := os.Getenv("REW_SONIC_CAPSULE")
 	if filename == "" {
 		t.Skip("Sonic capsule not configured")
 	}

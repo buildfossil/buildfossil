@@ -89,7 +89,7 @@ jobs:
       - name: Test legacy Replay cold-pull
         shell: bash
         env:
-          BUILDFOSSIL_DOCKER_TEST: "1"
+          REW_DOCKER_TEST: "1"
         run: |
           set -euo pipefail
           docker image rm alpine:3.20 >/dev/null 2>&1 || true
@@ -101,7 +101,7 @@ jobs:
 
       - name: Run Docker E2E
         env:
-          BUILDFOSSIL_DOCKER_TEST: "1"
+          REW_DOCKER_TEST: "1"
         run: go test -p 1 -count=1 -timeout 15m ./...
 
       - name: Build release archives
@@ -122,12 +122,12 @@ jobs:
           test "$(find . -maxdepth 1 -name '*.tar.gz' | wc -l)" -eq 2
 
           for archive in ./*.tar.gz; do
-            test "$(tar -tzf "$archive")" = "buildfossil"
+            test "$(tar -tzf "$archive")" = "rew"
           done
 
       - name: Upload candidate artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: buildfossil-alpha-candidate
+          name: rew-alpha-candidate
           path: dist/*
           if-no-files-found: error

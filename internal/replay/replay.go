@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
-	"github.com/buildfossil/buildfossil/internal/runtime/docker"
+	"github.com/rewtools/rew/internal/capsule"
+	"github.com/rewtools/rew/internal/runtime/docker"
 )
 
 type Result struct {
@@ -70,7 +70,7 @@ func RunWithOptions(
 		}
 	}
 
-	workspace, err := os.MkdirTemp("", "buildfossil-replay-*")
+	workspace, err := os.MkdirTemp("", "rew-replay-*")
 	if err != nil {
 		return result, fmt.Errorf("replay: create workspace: %w", err)
 	}

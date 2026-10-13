@@ -1,0 +1,156 @@
+package main
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"runtime"
+	"testing"
+	"time"
+
+	"github.com/rewtools/rew/internal/capsule"
+	"github.com/rewtools/rew/internal/replay"
+)
+
+func TestCaptureReplayMacOSGoEndToEnd(t *testing.T) {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
+		t.Skip("Docker integration test disabled")
+	}
+
+	if runtime.GOOS != "darwin" || runtime.GOARCH != "arm64" {
+		t.Skip("requires macOS ARM64")
+	}
+
+	if os.Geteuid() == 0 {
+		t.Skip("Replay v2 requires non-root execution")
+	}
+
+	t.Setenv("CGO_ENABLED", "0")
+	t.Setenv("GOFLAGS", "")
+	t.Setenv("GOOS", "darwin")
+	t.Setenv("GOARCH", "arm64")
+
+	workspace := t.TempDir()
+
+	files := map[string]string{
+		"go.mod":  "module example.com/macos-probe\n\ngo 1.26.0\n",
+		"main.go": "package main\n\nfunc main() {\n    undefinedFunction()\n}\n",
+	}
+
+	for name, content := range files {
+		if err := os.WriteFile(
+			filepath.Join(workspace, name),
+			[]byte(content),
+			0600,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	capsulePath := filepath.Join(t.TempDir(), "macos-failure.bfc")
+
+	captureExit := captureCommandV2(
+		[]string{"go", "build", "./..."},
+		workspace,
+		[]string{"go.mod", "main.go"},
+		capsulePath,
+	)
+
+	if captureExit != 1 {
+		t.Fatalf("capture exit = %d, want 1", captureExit)
+	}
+
+	verified, err := capsule.ReadVerifiedV2(capsulePath)
+	if err != nil {
+		t.Fatalf("verify capsule: %v", err)
+	}
+
+	if verified.Manifest.Runtime == nil ||
+		verified.Manifest.GoBuildEnv == nil {
+		t.Fatal("missing Go runtime or build environment")
+	}
+
+	if verified.Manifest.GoBuildEnv.CGOEnabled != "0" {
+		t.Fatal("capture did not record CGO_ENABLED=0")
+	}
+
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		120*time.Second,
+	)
+	defer cancel()
+
+	result, err := replay.RunV2WithOptions(
+		ctx,
+		capsulePath,
+		replay.Options{AllowArbitraryCommand: true},
+	)
+	if err != nil {
+		t.Fatalf("macOS to Docker replay: %v", err)
+	}
+
+	if result.Outcome != replay.OutcomeReproduced {
+		t.Fatalf(
+			"outcome = %q, original exit=%d, replay exit=%d",
+			result.Outcome,
+			result.OriginalExitCode,
+			result.ReplayExitCode,
+		)
+	}
+
+	// Regular replay must not collect dependency diagnostics.
+	if result.GoDependencies != nil {
+		t.Fatal("dependency diagnostics unexpectedly enabled")
+	}
+
+	// Repeat replay with dependency diagnostics enabled.
+	diagnosed, err := replay.RunV2WithOptions(
+		ctx,
+		capsulePath,
+		replay.Options{
+			AllowArbitraryCommand: true,
+			DiagnoseDependencies:  true,
+		},
+	)
+	if err != nil {
+		t.Fatalf("macOS replay with diagnostics: %v", err)
+	}
+
+	if diagnosed.Outcome != result.Outcome {
+		t.Fatalf(
+			"diagnostics changed outcome: %q -> %q",
+			result.Outcome,
+			diagnosed.Outcome,
+		)
+	}
+
+	if diagnosed.OriginalExitCode != result.OriginalExitCode ||
+		diagnosed.ReplayExitCode != result.ReplayExitCode {
+		t.Fatalf(
+			"diagnostics changed exit codes: original=%d/%d replay=%d/%d",
+			result.OriginalExitCode,
+			diagnosed.OriginalExitCode,
+			result.ReplayExitCode,
+			diagnosed.ReplayExitCode,
+		)
+	}
+
+	if diagnosed.GoDependencies == nil {
+		t.Fatal("missing Go dependency diagnostics")
+	}
+
+	if diagnosed.GoDependencies.State != capsule.GoDependenciesReady {
+		t.Fatalf(
+			"dependency state = %q, want ready (reason: %s)",
+			diagnosed.GoDependencies.State,
+			diagnosed.GoDependencies.Reason,
+		)
+	}
+
+	t.Logf(
+		"macOS Go dependency diagnostics: %s",
+		diagnosed.GoDependencies.State,
+	)
+
+	t.Logf("macOS → Linux Docker outcome: %s", result.Outcome)
+}

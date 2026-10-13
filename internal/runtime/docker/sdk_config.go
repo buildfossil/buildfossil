@@ -27,7 +27,7 @@ func newSecureContainerOptions(
 			AttachStdout: true,
 			AttachStderr: true,
 			Labels: map[string]string{
-				"org.buildfossil.component": "replay",
+				"org.rew.component": "replay",
 			},
 		},
 		HostConfig: &container.HostConfig{

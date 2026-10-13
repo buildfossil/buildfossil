@@ -1,6 +1,6 @@
 package replay
 
-import "github.com/buildfossil/buildfossil/internal/capsule"
+import "github.com/rewtools/rew/internal/capsule"
 
 // attachGoDependencyDiagnostics attaches advisory information without
 // changing the outcome or exit codes of a completed replay.

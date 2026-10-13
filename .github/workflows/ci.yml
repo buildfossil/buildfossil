@@ -39,7 +39,7 @@ jobs:
       - name: Build Linux AMD64 CLI
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-            go build -o buildfossil ./cmd/buildfossil
+            go build -o rew ./cmd/rew
 
   linux-e2e:
     name: Linux Docker E2E
@@ -74,15 +74,15 @@ jobs:
       - name: Run Capture and Replay v2 E2E
         shell: bash
         env:
-          BUILDFOSSIL_DOCKER_TEST: "1"
+          REW_DOCKER_TEST: "1"
         run: |
           set -o pipefail
 
-          go test -count=1 -v ./cmd/buildfossil \
+          go test -count=1 -v ./cmd/rew \
             -run '^TestCaptureReplayV2EndToEnd$' \
-            | tee /tmp/buildfossil-e2e.log
+            | tee /tmp/rew-e2e.log
 
-          if grep -q -- '--- SKIP: TestCaptureReplayV2EndToEnd' /tmp/buildfossil-e2e.log; then
+          if grep -q -- '--- SKIP: TestCaptureReplayV2EndToEnd' /tmp/rew-e2e.log; then
             echo "E2E test was unexpectedly skipped"
             exit 1
           fi
@@ -91,17 +91,17 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          BUILDFOSSIL_DOCKER_TEST=1 go test \
+          REW_DOCKER_TEST=1 go test \
             -count=1 \
             -v \
             -timeout 90s \
-            ./cmd/buildfossil \
+            ./cmd/rew \
             -run '^TestReplayCLISIGINT$'
 
       - name: Test Docker sandbox security
         shell: bash
         env:
-          BUILDFOSSIL_DOCKER_TEST: "1"
+          REW_DOCKER_TEST: "1"
         run: |
           set -o pipefail
 
@@ -115,16 +115,16 @@ jobs:
       - name: Go runtime Docker E2E
         shell: bash
         env:
-          BUILDFOSSIL_DOCKER_TEST: "1"
+          REW_DOCKER_TEST: "1"
         run: |
           set -euo pipefail
 
           go test -count=1 -v -timeout 180s \
             ./internal/runtime/docker \
             -run '^TestSDKGoRuntimeBuildFailure$' \
-            | tee /tmp/buildfossil-go-runtime.log
+            | tee /tmp/rew-go-runtime.log
 
-          if grep -q -- '--- SKIP: TestSDKGoRuntimeBuildFailure' /tmp/buildfossil-go-runtime.log; then
+          if grep -q -- '--- SKIP: TestSDKGoRuntimeBuildFailure' /tmp/rew-go-runtime.log; then
             echo "Go runtime test was unexpectedly skipped"
             exit 1
           fi
@@ -132,9 +132,9 @@ jobs:
           go test -count=1 -v -timeout 180s \
             ./internal/replay \
             -run '^TestReplayV2GoBuildIntegration$' \
-            | tee /tmp/buildfossil-go-replay.log
+            | tee /tmp/rew-go-replay.log
 
-          if grep -q -- '--- SKIP: TestReplayV2GoBuildIntegration' /tmp/buildfossil-go-replay.log; then
+          if grep -q -- '--- SKIP: TestReplayV2GoBuildIntegration' /tmp/rew-go-replay.log; then
             echo "Go replay test was unexpectedly skipped"
             exit 1
           fi
@@ -142,17 +142,17 @@ jobs:
       - name: Go Capture to Replay E2E
         shell: bash
         env:
-          BUILDFOSSIL_DOCKER_TEST: "1"
+          REW_DOCKER_TEST: "1"
         run: |
           set -euo pipefail
 
           go test -count=1 -v -timeout 180s \
-            ./cmd/buildfossil \
+            ./cmd/rew \
             -run '^TestCaptureReplayGoBuildEndToEnd$' \
-            | tee /tmp/buildfossil-go-capture-e2e.log
+            | tee /tmp/rew-go-capture-e2e.log
 
           if ! grep -q -- '--- PASS: TestCaptureReplayGoBuildEndToEnd' \
-            /tmp/buildfossil-go-capture-e2e.log; then
+            /tmp/rew-go-capture-e2e.log; then
             echo "Go Capture/Replay E2E did not pass"
             exit 1
           fi
@@ -160,16 +160,16 @@ jobs:
       - name: Schema v3 Docker runner E2E
         shell: bash
         env:
-          BUILDFOSSIL_DOCKER_TEST: "1"
+          REW_DOCKER_TEST: "1"
         run: |
           set -euo pipefail
 
           go test -count=1 -v -timeout 8m \
             ./internal/runtime/docker \
             -run '^(TestSDKOfflineExecRunner|TestSDKOfflineExecCancelAfterCommandStarted|TestExecuteInContainerStartFailureE2E)$' \
-            | tee "$RUNNER_TEMP/buildfossil-v3-docker.log"
+            | tee "$RUNNER_TEMP/rew-v3-docker.log"
 
-          if grep -q -- '--- SKIP:' "$RUNNER_TEMP/buildfossil-v3-docker.log"; then
+          if grep -q -- '--- SKIP:' "$RUNNER_TEMP/rew-v3-docker.log"; then
             echo "Schema v3 Docker tests were unexpectedly skipped"
             exit 1
           fi
@@ -177,22 +177,22 @@ jobs:
       - name: Schema v3 Replay API and CLI E2E
         shell: bash
         env:
-          BUILDFOSSIL_DOCKER_TEST: "1"
+          REW_DOCKER_TEST: "1"
         run: |
           set -euo pipefail
 
           go test -count=1 -v -timeout 5m \
             ./internal/replay \
             -run '^TestReplayV3OfflineGoFailure$' \
-            | tee "$RUNNER_TEMP/buildfossil-v3-replay.log"
+            | tee "$RUNNER_TEMP/rew-v3-replay.log"
 
           if ! grep -q -- '--- PASS: TestReplayV3OfflineGoFailure' \
-            "$RUNNER_TEMP/buildfossil-v3-replay.log"; then
+            "$RUNNER_TEMP/rew-v3-replay.log"; then
             echo "Schema v3 Replay E2E did not pass"
             exit 1
           fi
 
-          if grep -q -- '--- SKIP:' "$RUNNER_TEMP/buildfossil-v3-replay.log"; then
+          if grep -q -- '--- SKIP:' "$RUNNER_TEMP/rew-v3-replay.log"; then
             echo "Schema v3 Replay E2E was unexpectedly skipped"
             exit 1
           fi
@@ -200,16 +200,16 @@ jobs:
       - name: Schema v3 Snapshot Docker E2E
         shell: bash
         env:
-          BUILDFOSSIL_DOCKER_TEST: "1"
+          REW_DOCKER_TEST: "1"
         run: |
           set -euo pipefail
 
           go test -count=1 -v -timeout 12m \
             ./internal/runtime/docker \
             -run '^(TestSnapshotVolumes.*|TestSnapshotReadersDocker.*|TestSnapshotExecutorEndToEnd|TestSnapshotOfflineGoBuild)$' \
-            | tee "$RUNNER_TEMP/buildfossil-v3-snapshot.log"
+            | tee "$RUNNER_TEMP/rew-v3-snapshot.log"
 
-          if grep -q -- '--- SKIP:' "$RUNNER_TEMP/buildfossil-v3-snapshot.log"; then
+          if grep -q -- '--- SKIP:' "$RUNNER_TEMP/rew-v3-snapshot.log"; then
             echo "Snapshot Docker tests were unexpectedly skipped"
             exit 1
           fi
@@ -245,12 +245,12 @@ jobs:
           set -euo pipefail
 
           go test -count=1 -v \
-            ./cmd/buildfossil \
+            ./cmd/rew \
             -run '^TestCaptureV2DetectsGoRuntime$' \
-            | tee /tmp/buildfossil-macos-capture.log
+            | tee /tmp/rew-macos-capture.log
 
           if ! grep -q -- '--- PASS: TestCaptureV2DetectsGoRuntime' \
-            /tmp/buildfossil-macos-capture.log; then
+            /tmp/rew-macos-capture.log; then
             echo "macOS Go Capture test did not pass"
             exit 1
           fi
@@ -264,18 +264,18 @@ jobs:
           set -euo pipefail
 
           go test -count=1 -v -timeout 3m \
-            ./cmd/buildfossil \
+            ./cmd/rew \
             -run '^TestCaptureV3' \
-            | tee "$RUNNER_TEMP/buildfossil-v3-macos-capture.log"
+            | tee "$RUNNER_TEMP/rew-v3-macos-capture.log"
 
           if grep -q -- '--- FAIL:\|--- SKIP:' \
-            "$RUNNER_TEMP/buildfossil-v3-macos-capture.log"; then
+            "$RUNNER_TEMP/rew-v3-macos-capture.log"; then
             echo "Schema v3 macOS Capture tests failed or skipped"
             exit 1
           fi
 
           if ! grep -q -- '--- PASS: TestCaptureV3CreatesVerifiedCapsule' \
-            "$RUNNER_TEMP/buildfossil-v3-macos-capture.log"; then
+            "$RUNNER_TEMP/rew-v3-macos-capture.log"; then
             echo "Schema v3 Capture test did not pass"
             exit 1
           fi
@@ -295,8 +295,8 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      - name: Build BuildFossil CLI
-        run: go build -o buildfossil ./cmd/buildfossil
+      - name: Build REW CLI
+        run: go build -o rew ./cmd/rew
 
       - name: Capture Go compilation failure
         shell: bash
@@ -314,7 +314,7 @@ jobs:
           cd testdata/cross-platform-go
 
           set +e
-          ../../buildfossil capture \
+          ../../rew capture \
             --include go.mod \
             --include main.go \
             -- go build ./...
@@ -358,23 +358,23 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: cross-platform-go-capsule
-          path: ${{ runner.temp }}/buildfossil-capsule
+          path: ${{ runner.temp }}/rew-capsule
 
-      - name: Build BuildFossil CLI
-        run: go build -o buildfossil ./cmd/buildfossil
+      - name: Build REW CLI
+        run: go build -o rew ./cmd/rew
 
       - name: Replay macOS capsule in Linux Docker
         shell: bash
         run: |
           set -euo pipefail
 
-          capsule="$RUNNER_TEMP/buildfossil-capsule/cross-platform-go.bfc"
+          capsule="$RUNNER_TEMP/rew-capsule/cross-platform-go.bfc"
           test -s "$capsule"
 
           docker version
 
           set +e
-          ./buildfossil replay --v2 --allow-command "$capsule" \
+          ./rew replay --v2 --allow-command "$capsule" \
             > "$RUNNER_TEMP/replay.stdout" \
             2> "$RUNNER_TEMP/replay.stderr"
           replay_exit=$?
@@ -385,7 +385,7 @@ jobs:
           cat "$RUNNER_TEMP/replay.stderr"
 
           if [ "$replay_exit" -ne 0 ]; then
-            echo "BuildFossil Replay failed"
+            echo "REW Replay failed"
             exit 1
           fi
 
@@ -415,8 +415,8 @@ jobs:
           test "$(uname -m)" = arm64
           go version
 
-      - name: Build BuildFossil CLI
-        run: go build -o buildfossil ./cmd/buildfossil
+      - name: Build REW CLI
+        run: go build -o rew ./cmd/rew
 
       - name: Capture real Go dependency failure
         shell: bash
@@ -445,7 +445,7 @@ jobs:
           export GOSUMDB=off
 
           set +e
-          ../../buildfossil capture --v3 \
+          ../../rew capture --v3 \
             --include go.mod \
             --include go.sum \
             --include main.go \
@@ -462,13 +462,13 @@ jobs:
 
           test -s failure.bfc
 
-          cp failure.bfc "$RUNNER_TEMP/buildfossil-v3.bfc"
+          cp failure.bfc "$RUNNER_TEMP/rew-v3.bfc"
 
       - name: Upload schema v3 capsule
         uses: actions/upload-artifact@v6
         with:
           name: cross-platform-go-v3-capsule
-          path: ${{ runner.temp }}/buildfossil-v3.bfc
+          path: ${{ runner.temp }}/rew-v3.bfc
           if-no-files-found: error
           retention-days: 7
 
@@ -491,10 +491,10 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: cross-platform-go-v3-capsule
-          path: ${{ runner.temp }}/buildfossil-v3
+          path: ${{ runner.temp }}/rew-v3
 
-      - name: Build BuildFossil CLI
-        run: go build -o buildfossil ./cmd/buildfossil
+      - name: Build REW CLI
+        run: go build -o rew ./cmd/rew
 
       - name: Replay transferred capsule offline
         shell: bash
@@ -506,11 +506,11 @@ jobs:
 
           docker version
 
-          capsule="$RUNNER_TEMP/buildfossil-v3/buildfossil-v3.bfc"
+          capsule="$RUNNER_TEMP/rew-v3/rew-v3.bfc"
           test -s "$capsule"
 
           set +e
-          ./buildfossil replay --v3 --allow-command "$capsule" \
+          ./rew replay --v3 --allow-command "$capsule" \
             > "$RUNNER_TEMP/v3-replay.stdout" \
             2> "$RUNNER_TEMP/v3-replay.stderr"
           replay_exit=$?

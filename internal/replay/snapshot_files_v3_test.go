@@ -6,7 +6,7 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 	"os"
 	"testing"
 )

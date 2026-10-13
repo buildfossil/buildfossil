@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
+	"github.com/rewtools/rew/internal/capsule"
 )
 
 func storedSnapshotFixtureV3(

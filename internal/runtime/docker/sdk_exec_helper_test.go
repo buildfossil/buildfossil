@@ -11,7 +11,7 @@ func TestLimitedExecBuffer(t *testing.T) {
 	t.Run("within limit", func(t *testing.T) {
 		var buffer limitedExecBuffer
 
-		input := []byte("buildfossil-error\n")
+		input := []byte("rew-error\n")
 
 		n, err := buffer.Write(input)
 		if err != nil {

@@ -36,7 +36,7 @@ func NewArtifactStoreV3(budget int64) (*ArtifactStoreV3, error) {
 		return nil, fmt.Errorf("capsule: invalid artifact store budget")
 	}
 
-	dir, err := os.MkdirTemp("", "buildfossil-artifacts-v3-*")
+	dir, err := os.MkdirTemp("", "rew-artifacts-v3-*")
 	if err != nil {
 		return nil, fmt.Errorf("capsule: create artifact store: %w", err)
 	}

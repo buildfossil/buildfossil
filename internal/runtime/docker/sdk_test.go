@@ -13,7 +13,7 @@ import (
 )
 
 func TestSDKConnection(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -26,7 +26,7 @@ func TestSDKConnection(t *testing.T) {
 }
 
 func TestSDKRunStreamsAndExitCode(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -71,7 +71,7 @@ func TestSDKRunStreamsAndExitCode(t *testing.T) {
 }
 
 func TestSDKRunSecurityRestrictions(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -89,13 +89,13 @@ func TestSDKRunSecurityRestrictions(t *testing.T) {
 			`echo "uid=$(id -u)"
 			echo "gid=$(id -g)"
 
-			if touch /buildfossil-root-write-test 2>/dev/null; then
+			if touch /rew-root-write-test 2>/dev/null; then
 				echo "FAIL: root filesystem writable"
 				exit 11
 			fi
 			echo "PASS: root filesystem read-only"
 
-			if touch /workspace/buildfossil-write-test 2>/dev/null; then
+			if touch /workspace/rew-write-test 2>/dev/null; then
 				echo "FAIL: workspace writable"
 				exit 12
 			fi
@@ -169,7 +169,7 @@ func TestSDKRunSecurityRestrictions(t *testing.T) {
 }
 
 func TestSDKRunFastCommandDoesNotLoseOutput(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -224,7 +224,7 @@ func TestSDKRunFastCommandDoesNotLoseOutput(t *testing.T) {
 }
 
 func TestSDKRunLargeStderr(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -281,7 +281,7 @@ func TestSDKRunLargeStderr(t *testing.T) {
 }
 
 func TestSDKRunStartFailure(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -299,7 +299,7 @@ func TestSDKRunStartFailure(t *testing.T) {
 	_, err := RunWithSDK(
 		ctx,
 		workspace,
-		[]string{"/buildfossil-command-does-not-exist"},
+		[]string{"/rew-command-does-not-exist"},
 		user,
 		&stdout,
 		&stderr,
@@ -315,7 +315,7 @@ func TestSDKRunStartFailure(t *testing.T) {
 }
 
 func TestSDKRunExecutionDeadline(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 
@@ -348,7 +348,7 @@ func TestSDKRunExecutionDeadline(t *testing.T) {
 	}
 }
 func TestSDKInternalExecutionTimeout(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 

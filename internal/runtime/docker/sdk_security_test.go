@@ -10,7 +10,7 @@ import (
 )
 
 func TestSDKContainerSecurityConfiguration(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}
 

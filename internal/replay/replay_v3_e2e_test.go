@@ -15,13 +15,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/buildfossil/buildfossil/internal/capsule"
-	"github.com/buildfossil/buildfossil/internal/runtime/docker"
+	"github.com/rewtools/rew/internal/capsule"
+	"github.com/rewtools/rew/internal/runtime/docker"
 	"golang.org/x/mod/sumdb/dirhash"
 )
 
 func TestReplayV3OfflineGoFailure(t *testing.T) {
-	if os.Getenv("BUILDFOSSIL_DOCKER_TEST") != "1" {
+	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker E2E disabled")
 	}
 	if os.Geteuid() == 0 {
@@ -290,7 +290,7 @@ func main() {
 		"build",
 		"-o",
 		cliBinary,
-		"../../cmd/buildfossil",
+		"../../cmd/rew",
 	)
 
 	buildOutput, err := buildCLI.CombinedOutput()
