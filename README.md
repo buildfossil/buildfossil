@@ -1,9 +1,10 @@
 <div align="center">
 
-  <a href="https://github.com/rewtools/rew">
-    <img src="./assets/img/dark_logo.png#gh-dark-mode-only" alt="REW" width="380">
-    <img src="./assets/img/light_logo.png#gh-light-mode-only" alt="REW" width="380">
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./assets/img/dark_logo.png">
+    <source media="(prefers-color-scheme: light)" srcset="./assets/img/light_logo.png">
+    <img src="./assets/img/light_logo.png" alt="REW" width="380">
+  </picture>
 
   <h3>Capture a failed Go build. Replay the failure offline.</h3>
 
