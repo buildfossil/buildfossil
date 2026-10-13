@@ -148,9 +148,12 @@ implementation details and remaining limitations.
 
 ## Dependency Handling
 
-Schema-v3 currently supports exactly one direct external Go module dependency.
+Schema-v3 supports bounded selection of external Go modules,
+including transitive dependencies: up to 128 selected external modules,
+of which up to 64 may have complete ZIP artifacts.
 
-Dependency artifacts are captured from the Go module cache and checked against expected metadata and checksums.
+Dependency artifacts are captured from the Go module cache and checked
+against expected metadata and checksums.
 
 Replay packages verified dependency artifacts into a module-cache snapshot.
 The execution container copies these artifacts from a read-only Docker
@@ -158,10 +161,11 @@ volume into writable tmpfs and performs Go module preparation offline.
 
 Limitations include:
 
-- No general-purpose dependency graph support.
-- No guarantee that captured dependencies are free of vulnerabilities.
-- No authentication of the capsule's original publisher.
-- No guarantee that every Go build configuration is supported.
+- Not every Go module graph or build configuration is supported.
+- Required dependency artifacts must be available during capture.
+- Captured dependencies are not guaranteed free of vulnerabilities.
+- Module checksums do not authenticate the capsule publisher.
+- Replay must not execute untrusted source code.
 
 ## Secrets and Sensitive Information
 
