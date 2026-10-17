@@ -13,6 +13,7 @@ Usage:
 Commands:
   capture    Capture a failed Go build
   replay     Verify and replay a capsule
+  cleanup    Inspect Docker snapshot volumes (requires --dry-run)
   version    Print the CLI version
   splash     Show the REW terminal banner
   help       Show this help
