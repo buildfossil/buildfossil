@@ -153,6 +153,9 @@ func run(args []string) int {
 			"failure.bfc",
 		)
 
+	case "cleanup":
+		return runCleanup(args[1:])
+
 	case "replay":
 		if len(args) == 2 && (args[1] == "--help" || args[1] == "-h") {
 			printReplayHelp()
