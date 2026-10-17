@@ -53,12 +53,17 @@ func DetectRuntimeWithExecutable(
 	}
 
 	fields := strings.Fields(string(output))
-	if len(fields) < 3 || fields[2] != "go"+SupportedGoVersion {
+	if len(fields) < 3 || fields[0] != "go" || fields[1] != "version" {
+		return nil
+	}
+
+	version, ok := strings.CutPrefix(fields[2], "go")
+	if !ok || !IsSupportedGoVersion(version) {
 		return nil
 	}
 
 	return &Runtime{
 		Kind:    "go",
-		Version: SupportedGoVersion,
+		Version: version,
 	}
 }

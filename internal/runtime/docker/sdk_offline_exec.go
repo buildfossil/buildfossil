@@ -29,7 +29,7 @@ func RunWithSDKRuntimeOfflineExec(
 
 	if runtime == nil ||
 		runtime.Kind != "go" ||
-		runtime.Version != "1.26.6" {
+		!isSupportedGoRuntime(runtime) {
 		return 0, fmt.Errorf("docker SDK: unsupported offline Go runtime")
 	}
 

@@ -29,7 +29,7 @@ Usage:
   rew capture --v3 --include <file> ... [--include-go-embed] -- go build ./...
 
 Requirements:
-  Go 1.26.6
+  Schema-v3 Go runtime: 1.25.14 or 1.26.6 (exact patch versions)
   GOOS/GOARCH: darwin/arm64 or linux/amd64
   CGO_ENABLED=0 and empty GOFLAGS
   GOWORK=off when a Go workspace is active
@@ -72,7 +72,7 @@ Usage:
 
 Requirements:
   Docker Engine with Linux AMD64 container execution
-  Access to the pinned Go replay image
+  Access to the pinned Go replay image matching the captured version
 
 Memory:
   Default: 256 MiB

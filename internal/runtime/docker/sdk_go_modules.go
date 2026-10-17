@@ -15,7 +15,7 @@ func configureGoModuleArtifacts(
 ) error {
 	if runtime == nil ||
 		runtime.Kind != "go" ||
-		runtime.Version != "1.26.6" {
+		!isSupportedGoRuntime(runtime) {
 		return fmt.Errorf("docker SDK: module artifacts require supported Go runtime")
 	}
 

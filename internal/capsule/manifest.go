@@ -87,6 +87,13 @@ func (m Manifest) Validate() error {
 		}
 	}
 
+	// Schema v2 retains its original exact Go version policy.
+	if m.SchemaVersion == SchemaVersionV2 &&
+		m.Runtime != nil &&
+		m.Runtime.Version != SupportedGoVersion {
+		return errors.New("capsule: unsupported Go runtime version for schema version 2")
+	}
+
 	if m.GoBuildEnv != nil {
 		if m.SchemaVersion < SchemaVersionV2 {
 			return errors.New("capsule: Go build environment requires schema version 2")
@@ -94,7 +101,7 @@ func (m Manifest) Validate() error {
 
 		if m.Runtime == nil ||
 			m.Runtime.Kind != "go" ||
-			m.Runtime.Version != SupportedGoVersion {
+			!IsSupportedGoVersion(m.Runtime.Version) {
 			return errors.New("capsule: Go build environment requires supported Go runtime")
 		}
 
@@ -114,7 +121,7 @@ func (m Manifest) Validate() error {
 
 		if m.Runtime == nil ||
 			m.Runtime.Kind != "go" ||
-			m.Runtime.Version != SupportedGoVersion {
+			!IsSupportedGoVersion(m.Runtime.Version) {
 			return errors.New(
 				"capsule: Go dependency status requires supported Go runtime",
 			)
@@ -132,7 +139,7 @@ func (m Manifest) Validate() error {
 	if m.SchemaVersion == SchemaVersionV3 {
 		if m.Runtime == nil ||
 			m.Runtime.Kind != "go" ||
-			m.Runtime.Version != SupportedGoVersion {
+			!IsSupportedGoVersion(m.Runtime.Version) {
 			return errors.New("capsule: schema version 3 requires supported Go runtime")
 		}
 

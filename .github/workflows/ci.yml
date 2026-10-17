@@ -541,3 +541,187 @@ jobs:
           fi
 
           echo "CROSS-PLATFORM SCHEMA V3: PASS"
+
+  cross-platform-go125-capture:
+    name: Go 1.25.14 Schema v3 Capture on macOS ARM64
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up REW build toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Verify macOS ARM64 and build REW
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = Darwin
+          test "$(uname -m)" = arm64
+          go version
+          GOTOOLCHAIN=local go build -o rew ./cmd/rew
+
+      - name: Install exact Go 1.25.14 toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.14'
+          cache: false
+
+      - name: Capture Go 1.25.14 compiler failure
+        shell: bash
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+          GOFLAGS: ""
+          GOWORK: "off"
+          GOTOOLCHAIN: local
+          GOPROXY: "off"
+          GOSUMDB: "off"
+        run: |
+          set -euo pipefail
+
+          test "$(go version)" = "go version go1.25.14 darwin/arm64"
+
+          project="$RUNNER_TEMP/rew-go125-project"
+          mkdir -p "$project"
+
+          cat > "$project/go.mod" <<'MOD'
+          module example.com/rew-go125-ci
+
+          go 1.25
+          MOD
+
+          cat > "$project/main.go" <<'GO'
+          package main
+
+          func main() {
+              undefinedREWSymbol()
+          }
+          GO
+
+          cd "$project"
+
+          set +e
+          "$GITHUB_WORKSPACE/rew" capture --v3 \
+            --include-go-sources \
+            -- go build ./... \
+            > "$RUNNER_TEMP/go125-capture.stdout" \
+            2> "$RUNNER_TEMP/go125-capture.stderr"
+          capture_exit=$?
+          set -e
+
+          cat "$RUNNER_TEMP/go125-capture.stdout"
+          cat "$RUNNER_TEMP/go125-capture.stderr"
+
+          if [ "$capture_exit" -ne 1 ] || [ ! -s failure.bfc ]; then
+            echo "Go 1.25.14 capture failed: exit=$capture_exit"
+            exit 1
+          fi
+
+          python3 - failure.bfc <<'PYVERIFY'
+          import json
+          import sys
+          import tarfile
+
+          with tarfile.open(sys.argv[1], "r:*") as archive:
+              f = archive.extractfile("manifest.json")
+              assert f is not None
+              manifest = json.load(f)
+
+          assert manifest["schema_version"] == 3
+          assert manifest["runtime"] == {
+              "kind": "go",
+              "version": "1.25.14",
+          }
+
+          print("PASS: schema-v3 capsule records Go 1.25.14")
+          PYVERIFY
+
+          cp failure.bfc "$RUNNER_TEMP/rew-go125.bfc"
+
+      - name: Upload Go 1.25.14 capsule
+        uses: actions/upload-artifact@v6
+        with:
+          name: cross-platform-go125-v3-capsule
+          path: ${{ runner.temp }}/rew-go125.bfc
+          if-no-files-found: error
+          retention-days: 7
+
+  cross-platform-go125-replay:
+    name: Go 1.25.14 Schema v3 Replay on Linux AMD64
+    runs-on: ubuntu-24.04
+    needs: cross-platform-go125-capture
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up REW build toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Build REW CLI
+        run: GOTOOLCHAIN=local go build -o rew ./cmd/rew
+
+      - name: Download Go 1.25.14 capsule
+        uses: actions/download-artifact@v6
+        with:
+          name: cross-platform-go125-v3-capsule
+          path: ${{ runner.temp }}/rew-go125
+
+      - name: Replay Go 1.25.14 capsule offline
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(uname -s)" = Linux
+          test "$(uname -m)" = x86_64
+
+          docker version
+
+          capsule="$RUNNER_TEMP/rew-go125/rew-go125.bfc"
+          test -s "$capsule"
+
+          set +e
+          ./rew replay --v3 --allow-command \
+            --memory 1g \
+            "$capsule" \
+            > "$RUNNER_TEMP/go125-replay.stdout" \
+            2> "$RUNNER_TEMP/go125-replay.stderr"
+          replay_exit=$?
+          set -e
+
+          cat "$RUNNER_TEMP/go125-replay.stdout"
+          cat "$RUNNER_TEMP/go125-replay.stderr"
+
+          if [ "$replay_exit" -ne 0 ]; then
+            echo "Go 1.25.14 replay failed: exit=$replay_exit"
+            exit 1
+          fi
+
+          if ! grep -q 'Outcome: *reproduced' \
+            "$RUNNER_TEMP/go125-replay.stdout"; then
+            echo "Expected reproduced outcome for Go 1.25.14"
+            exit 1
+          fi
+
+          if ! grep -q 'Original exit code: *1' \
+            "$RUNNER_TEMP/go125-replay.stdout"; then
+            echo "Original exit code mismatch"
+            exit 1
+          fi
+
+          if ! grep -q 'Replay exit code: *1' \
+            "$RUNNER_TEMP/go125-replay.stdout"; then
+            echo "Replay exit code mismatch"
+            exit 1
+          fi
+
+          echo "GO 1.25.14 CROSS-PLATFORM SCHEMA V3: PASS"

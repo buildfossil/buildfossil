@@ -13,7 +13,7 @@ REW is not production-ready. Supported scenarios are intentionally narrow, and s
 | Component | Current support |
 |---|---|
 | Capture language | Go |
-| Go toolchain | Go 1.26.6 |
+| Go toolchain | Schema v3: Go 1.25.14 or Go 1.26.6 (exact patch versions) |
 | Captured command | `go build ./...` |
 | External modules | Up to 128 selected external modules; up to 64 full ZIP modules; offline graph resolution required |
 | Dependency artifacts | `.zip`, `.mod`, `.info` |
@@ -21,7 +21,7 @@ REW is not production-ready. Supported scenarios are intentionally narrow, and s
 | Workspace capture | Explicitly included regular files |
 | Capsule format | Experimental schema-v3 `.bfc` |
 | Replay target | Linux AMD64 |
-| Replay runtime | Pinned Go Docker image |
+| Replay runtime | Version-specific pinned Go Docker image matching the capsule runtime |
 | Container networking | Disabled |
 | Replay authorization | Explicit `--allow-command` |
 | Failure comparison | Exit code and stderr |
@@ -175,8 +175,10 @@ Resolving the executable once does not make its contents immutable.
 REW does not protect against replacement or modification of the
 selected Go executable between subprocess invocations.
 
-This behavior does not change the currently supported Go version
-or the limitations of legacy capture paths.
+Schema-v3 supports exactly Go 1.25.14 and Go 1.26.6.
+Legacy schema-v2 retains its original Go 1.26.6 runtime policy.
+Selecting the executable once does not remove the existing capture
+consistency and trust-boundary limitations.
 
 ## Go Environment Restrictions
 
