@@ -3,6 +3,7 @@ package capsule
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -99,5 +100,38 @@ func TestDetectRuntimeUnsupportedGoVersion(t *testing.T) {
 
 	if got != nil {
 		t.Fatalf("expected nil for unsupported version, got %+v", got)
+	}
+}
+
+func TestDetectRuntimeWithExecutableRejectsRelativePath(t *testing.T) {
+	got := DetectRuntimeWithExecutable(
+		[]string{"go", "build", "./..."},
+		t.TempDir(),
+		"go",
+	)
+	if got != nil {
+		t.Fatalf("relative executable accepted: %+v", got)
+	}
+}
+
+func TestDetectRuntimeWithExecutableSupportedVersion(t *testing.T) {
+	dir := t.TempDir()
+	goPath := filepath.Join(dir, "go")
+
+	script := "#!/bin/sh\nprintf 'go version go" +
+		SupportedGoVersion + " darwin/arm64\\n'\n"
+
+	if err := os.WriteFile(goPath, []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	got := DetectRuntimeWithExecutable(
+		[]string{"go", "build", "./..."},
+		t.TempDir(),
+		goPath,
+	)
+
+	if got == nil || got.Version != SupportedGoVersion {
+		t.Fatalf("expected supported runtime, got %+v", got)
 	}
 }

@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/rewtools/rew/internal/capsule"
 	"github.com/rewtools/rew/internal/execution"
@@ -67,16 +65,23 @@ func captureCommandV3WithOptions(
 		return 2
 	}
 
-	if err := capsule.ValidateGoWorkspaceV3(workspaceRoot); err != nil {
-		fmt.Fprintf(
-			os.Stderr,
-			"rew: Go workspace: %v\n",
-			err,
-		)
+	goExecutable, err := capsule.ResolveGoExecutable()
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"rew: resolve Go executable: %v\n", err)
 		return 125
 	}
 
-	detectedRuntime := capsule.DetectRuntime(argv, workspaceRoot)
+	if err := capsule.ValidateGoWorkspaceV3WithExecutable(
+		workspaceRoot, goExecutable,
+	); err != nil {
+		fmt.Fprintf(os.Stderr, "rew: Go workspace: %v\n", err)
+		return 125
+	}
+
+	detectedRuntime := capsule.DetectRuntimeWithExecutable(
+		argv, workspaceRoot, goExecutable,
+	)
 
 	if detectedRuntime == nil ||
 		detectedRuntime.Kind != "go" ||
@@ -86,7 +91,9 @@ func captureCommandV3WithOptions(
 		return 125
 	}
 
-	goBuildEnv, err := capsule.InspectGoBuildEnvironment(workspaceRoot)
+	goBuildEnv, err := capsule.InspectGoBuildEnvironmentWithExecutable(
+		workspaceRoot, goExecutable,
+	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
 			"rew: inspect Go environment: %v\n", err)
@@ -106,22 +113,16 @@ func captureCommandV3WithOptions(
 	}
 
 	if includeGoSources {
-		cacheCommand := exec.Command("go", "env", "GOMODCACHE")
-		cacheCommand.Dir = workspaceRoot
-		cacheOutput, err := cacheCommand.Output()
+		moduleCacheRoot, err := capsule.InspectGoModuleCacheWithExecutable(
+			workspaceRoot, goExecutable,
+		)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "rew: resolve Go module cache: %v\n", err)
 			return 125
 		}
 
-		moduleCacheRoot := strings.TrimSpace(string(cacheOutput))
-		if moduleCacheRoot == "" {
-			fmt.Fprintln(os.Stderr, "rew: empty Go module cache")
-			return 125
-		}
-
-		discovered, err := capsule.DiscoverGoSourceFilesV3(
-			workspaceRoot, moduleCacheRoot, goBuildEnv,
+		discovered, err := capsule.DiscoverGoSourceFilesV3WithExecutable(
+			workspaceRoot, moduleCacheRoot, goExecutable, goBuildEnv,
 		)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "rew: discover Go sources: %v\n", err)
@@ -192,25 +193,16 @@ func captureCommandV3WithOptions(
 	}
 
 	if includeGoEmbed {
-		cacheCommand := exec.Command("go", "env", "GOMODCACHE")
-		cacheCommand.Dir = workspaceRoot
-
-		cacheOutput, err := cacheCommand.Output()
+		moduleCacheRoot, err := capsule.InspectGoModuleCacheWithExecutable(
+			workspaceRoot, goExecutable,
+		)
 		if err != nil {
-			fmt.Fprintf(os.Stderr,
-				"rew: resolve Go module cache: %v\n", err)
+			fmt.Fprintf(os.Stderr, "rew: resolve Go module cache: %v\n", err)
 			return 125
 		}
 
-		moduleCacheRoot := strings.TrimSpace(string(cacheOutput))
-		if moduleCacheRoot == "" {
-			fmt.Fprintln(os.Stderr,
-				"rew: empty Go module cache")
-			return 125
-		}
-
-		discovered, err := capsule.DiscoverGoEmbedFilesV3(
-			workspaceRoot, moduleCacheRoot, goBuildEnv,
+		discovered, err := capsule.DiscoverGoEmbedFilesV3WithExecutable(
+			workspaceRoot, moduleCacheRoot, goExecutable, goBuildEnv,
 		)
 		if err != nil {
 			fmt.Fprintf(os.Stderr,
@@ -280,9 +272,13 @@ func captureCommandV3WithOptions(
 		return 125
 	}
 
-	result, err := execution.RunInDir(
+	buildEnv := capsule.LocalGoToolchainEnv()
+
+	result, err := execution.RunInDirWithExecutableEnv(
 		argv,
+		goExecutable,
 		workspaceRoot,
+		buildEnv,
 		os.Stdout,
 		os.Stderr,
 	)
@@ -345,27 +341,18 @@ func captureCommandV3WithOptions(
 			return 125
 		}
 	}
-
-	cacheCommand := exec.Command("go", "env", "GOMODCACHE")
-	cacheCommand.Dir = workspaceRoot
-
-	cacheOutput, err := cacheCommand.Output()
+	moduleCacheRoot, err := capsule.InspectGoModuleCacheWithExecutable(
+		workspaceRoot, goExecutable,
+	)
 	if err != nil {
-		fmt.Fprintf(os.Stderr,
-			"rew: resolve GOMODCACHE: %v\n", err)
+		fmt.Fprintf(os.Stderr, "rew: resolve Go module cache: %v\n", err)
 		return 125
 	}
 
-	moduleCacheRoot := strings.TrimSpace(string(cacheOutput))
-	if moduleCacheRoot == "" {
-		fmt.Fprintln(os.Stderr,
-			"rew: empty GOMODCACHE")
-		return 125
-	}
-
-	selectedModules, err := capsule.ListGoModuleGraphV3(
+	selectedModules, err := capsule.ListGoModuleGraphV3WithExecutable(
 		workspaceRoot,
 		moduleCacheRoot,
+		goExecutable,
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
@@ -429,8 +416,8 @@ func captureCommandV3WithOptions(
 		}
 	}
 
-	buildModules, err := capsule.ListGoBuildModulesV3(
-		workspaceRoot, moduleCacheRoot, selectedModules,
+	buildModules, err := capsule.ListGoBuildModulesV3WithExecutable(
+		workspaceRoot, moduleCacheRoot, selectedModules, goExecutable,
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
@@ -477,11 +464,12 @@ func captureCommandV3WithOptions(
 		return 125
 	}
 
-	graphIdentities, err := capsule.ListGoGraphModRequirementsV3(
+	graphIdentities, err := capsule.ListGoGraphModRequirementsV3WithExecutable(
 		workspaceRoot,
 		moduleCacheRoot,
 		mainModulePath,
 		selectedModules,
+		goExecutable,
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,

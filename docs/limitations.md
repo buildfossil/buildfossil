@@ -160,6 +160,24 @@ Consequently:
 
 For a supported v3 capture, `go.mod` and `go.sum` must be included.
 
+## Go Toolchain Selection During Capture
+
+For schema-v3 capture, REW resolves the `go` executable from `PATH`
+once and uses the resulting absolute path for runtime detection,
+environment inspection, source and embed discovery, dependency
+analysis, and execution of the captured build.
+
+These Go subprocesses run with `GOTOOLCHAIN=local`, overriding any
+inherited `GOTOOLCHAIN` setting. Automatic Go toolchain switching
+is therefore disabled during schema-v3 capture.
+
+Resolving the executable once does not make its contents immutable.
+REW does not protect against replacement or modification of the
+selected Go executable between subprocess invocations.
+
+This behavior does not change the currently supported Go version
+or the limitations of legacy capture paths.
+
 ## Go Environment Restrictions
 
 The supported portability configuration is deliberately constrained.

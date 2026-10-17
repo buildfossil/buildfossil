@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -22,6 +23,22 @@ func ListGoModuleGraphV3(
 	workspaceRoot string,
 	moduleCacheRoot string,
 ) ([]GoModuleIdentityV3, error) {
+	goExecutable, err := ResolveGoExecutable()
+	if err != nil {
+		return nil, err
+	}
+	return ListGoModuleGraphV3WithExecutable(workspaceRoot, moduleCacheRoot, goExecutable)
+}
+
+func ListGoModuleGraphV3WithExecutable(
+	workspaceRoot string,
+	moduleCacheRoot string,
+	goExecutable string,
+) ([]GoModuleIdentityV3, error) {
+	if !filepath.IsAbs(goExecutable) {
+		return nil, fmt.Errorf("capsule: Go executable must be absolute")
+	}
+
 	if workspaceRoot == "" || moduleCacheRoot == "" {
 		return nil, fmt.Errorf("capsule: missing workspace or module cache")
 	}
@@ -34,7 +51,7 @@ func ListGoModuleGraphV3(
 
 	cmd := exec.CommandContext(
 		ctx,
-		"go",
+		goExecutable,
 		"list",
 		"-m",
 		"-json",

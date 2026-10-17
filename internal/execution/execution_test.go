@@ -2,6 +2,8 @@ package execution
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -144,5 +146,100 @@ func TestRunTruncatesLargeOutput(t *testing.T) {
 	if stdout.Len() <= MaxCapturedOutput {
 		t.Errorf("terminal output size = %d, want > %d",
 			stdout.Len(), MaxCapturedOutput)
+	}
+}
+
+func TestRunInDirWithExecutablePreservesArgv(t *testing.T) {
+	dir := t.TempDir()
+	executable := filepath.Join(dir, "custom-go")
+
+	script := "#!/bin/sh\nprintf 'custom toolchain\\n' >&2\nexit 17\n"
+	if err := os.WriteFile(executable, []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	argv := []string{"go", "build", "./..."}
+	var stdout, stderr bytes.Buffer
+
+	result, err := RunInDirWithExecutable(
+		argv, executable, dir, &stdout, &stderr,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ExitCode != 17 {
+		t.Fatalf("exit code = %d, want 17", result.ExitCode)
+	}
+	if result.Stderr != "custom toolchain\n" {
+		t.Fatalf("stderr = %q", result.Stderr)
+	}
+	if !reflect.DeepEqual(result.Argv, argv) {
+		t.Fatalf("argv = %q, want %q", result.Argv, argv)
+	}
+}
+
+func TestRunInDirWithExecutableRejectsEmptyExecutable(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	_, err := RunInDirWithExecutable(
+		[]string{"go", "build", "./..."},
+		"",
+		t.TempDir(),
+		&stdout,
+		&stderr,
+	)
+	if err == nil {
+		t.Fatal("expected empty executable error")
+	}
+}
+
+func TestRunInDirWithExecutableEnvOverridesGoToolchain(t *testing.T) {
+	dir := t.TempDir()
+	executable := filepath.Join(dir, "fake-go")
+
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' \"$GOTOOLCHAIN\" >&2\n" +
+		"exit 17\n"
+
+	if err := os.WriteFile(executable, []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("GOTOOLCHAIN", "auto")
+
+	argv := []string{"go", "build", "./..."}
+	env := append(os.Environ(), "GOTOOLCHAIN=local")
+
+	var stdout, stderr bytes.Buffer
+
+	result, err := RunInDirWithExecutableEnv(
+		argv, executable, dir, env, &stdout, &stderr,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ExitCode != 17 {
+		t.Fatalf("exit code = %d, want 17", result.ExitCode)
+	}
+	if result.Stderr != "local\n" {
+		t.Fatalf("stderr = %q, want local", result.Stderr)
+	}
+	if !reflect.DeepEqual(result.Argv, argv) {
+		t.Fatalf("argv = %q, want %q", result.Argv, argv)
+	}
+}
+
+func TestRunInDirWithExecutableEnvRejectsNilEnvironment(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+
+	_, err := RunInDirWithExecutableEnv(
+		[]string{"go", "build", "./..."},
+		"/bin/echo",
+		t.TempDir(),
+		nil,
+		&stdout,
+		&stderr,
+	)
+	if err == nil {
+		t.Fatal("expected nil environment error")
 	}
 }

@@ -3,6 +3,7 @@ package capsule
 import (
 	"context"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -10,10 +11,29 @@ import (
 // DetectRuntime identifies supported toolchains for capture.
 // Unknown commands return nil, preserving legacy behavior.
 func DetectRuntime(argv []string, workingDir string) *Runtime {
+	goExecutable, err := ResolveGoExecutable()
+	if err != nil {
+		return nil
+	}
+
+	return DetectRuntimeWithExecutable(argv, workingDir, goExecutable)
+}
+
+// DetectRuntimeWithExecutable checks the runtime using an explicitly
+// selected Go executable. It does not change supported Go versions.
+func DetectRuntimeWithExecutable(
+	argv []string,
+	workingDir string,
+	goExecutable string,
+) *Runtime {
 	if len(argv) != 3 ||
 		argv[0] != "go" ||
 		argv[1] != "build" ||
 		argv[2] != "./..." {
+		return nil
+	}
+
+	if !filepath.IsAbs(goExecutable) {
 		return nil
 	}
 
@@ -23,8 +43,9 @@ func DetectRuntime(argv []string, workingDir string) *Runtime {
 	)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "go", "version")
+	cmd := exec.CommandContext(ctx, goExecutable, "version")
 	cmd.Dir = workingDir
+	cmd.Env = LocalGoToolchainEnv()
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -32,7 +53,6 @@ func DetectRuntime(argv []string, workingDir string) *Runtime {
 	}
 
 	fields := strings.Fields(string(output))
-
 	if len(fields) < 3 || fields[2] != "go"+SupportedGoVersion {
 		return nil
 	}
