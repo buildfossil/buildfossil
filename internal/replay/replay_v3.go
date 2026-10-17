@@ -61,7 +61,7 @@ func RunV3WithOptions(
 
 	if verified.Manifest.Runtime == nil ||
 		verified.Manifest.Runtime.Kind != "go" ||
-		verified.Manifest.Runtime.Version != "1.26.6" {
+		!capsule.IsSupportedGoVersion(verified.Manifest.Runtime.Version) {
 		return result, fmt.Errorf("replay: unsupported v3 runtime")
 	}
 

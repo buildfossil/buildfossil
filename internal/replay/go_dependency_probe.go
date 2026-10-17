@@ -24,7 +24,9 @@ func goDependencyProbeArgs() []string {
 func shouldProbeGoDependencies(m capsule.Manifest) bool {
 	return m.Runtime != nil &&
 		m.Runtime.Kind == "go" &&
-		m.Runtime.Version == capsule.SupportedGoVersion &&
+		capsule.IsSupportedGoVersion(m.Runtime.Version) &&
+		(m.SchemaVersion != capsule.SchemaVersionV2 ||
+			m.Runtime.Version == capsule.SupportedGoVersion) &&
 		m.GoBuildEnv != nil
 }
 

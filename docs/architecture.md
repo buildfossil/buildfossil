@@ -270,7 +270,8 @@ The verified cross-platform CI scenario is:
 - Go build target: Linux AMD64
 - CGO: disabled
 - Replay host: Linux AMD64
-- Replay runtime: pinned Go 1.26.6 Docker environment
+- Replay runtime in the verified cross-platform CI scenario: pinned Go 1.26.6 Docker environment
+- Additional schema-v3 Go 1.25.14 runtime: locally verified with macOS ARM64 capture and Linux AMD64 Docker replay; independent CI validation pending
 
 The capsule is transferred between independent GitHub Actions runners.
 

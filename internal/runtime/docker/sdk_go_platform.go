@@ -16,7 +16,7 @@ func configureGoTargetPlatform(
 		return fmt.Errorf("docker SDK: Go target requires runtime")
 	}
 
-	if runtime.Kind != "go" || runtime.Version != "1.26.6" {
+	if runtime.Kind != "go" || !isSupportedGoRuntime(runtime) {
 		return fmt.Errorf("docker SDK: unsupported Go runtime")
 	}
 

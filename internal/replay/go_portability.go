@@ -9,6 +9,11 @@ import (
 func validatePortableGoReplay(manifest capsule.Manifest) error {
 	if manifest.Runtime == nil ||
 		manifest.Runtime.Kind != "go" ||
+		!capsule.IsSupportedGoVersion(manifest.Runtime.Version) {
+		return fmt.Errorf("replay: portable Go requires supported Go runtime")
+	}
+
+	if manifest.SchemaVersion == capsule.SchemaVersionV2 &&
 		manifest.Runtime.Version != capsule.SupportedGoVersion {
 		return fmt.Errorf("replay: portable Go requires supported Go runtime")
 	}

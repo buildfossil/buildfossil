@@ -31,6 +31,12 @@ func captureCommandV2(
 		workspaceRoot,
 	)
 
+	// Preserve the legacy v2 toolchain detection policy.
+	if detectedRuntime != nil &&
+		detectedRuntime.Version != capsule.SupportedGoVersion {
+		detectedRuntime = nil
+	}
+
 	var goBuildEnv *capsule.GoBuildEnvironment
 
 	if detectedRuntime != nil && detectedRuntime.Kind == "go" {

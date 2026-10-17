@@ -85,7 +85,7 @@ func captureCommandV3WithOptions(
 
 	if detectedRuntime == nil ||
 		detectedRuntime.Kind != "go" ||
-		detectedRuntime.Version != capsule.SupportedGoVersion {
+		!capsule.IsSupportedGoVersion(detectedRuntime.Version) {
 		fmt.Fprintln(os.Stderr,
 			"rew: v3 requires the supported Go runtime")
 		return 125

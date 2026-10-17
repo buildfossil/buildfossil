@@ -56,7 +56,7 @@ REW does not guarantee that every build failure can be reproduced.
 
 The schema-v3 prototype supports:
 
-- Go 1.26.6.
+- Go 1.25.14 or Go 1.26.6 (exact patch versions).
 - The exact command `go build ./...`.
 - Up to 128 selected external Go modules, including transitive dependencies; up to 64 with full ZIP artifacts.
 - Selected regular workspace files.
@@ -85,7 +85,8 @@ Active Go workspaces (`go.work`) are unsupported; use `GOWORK=off`.
 
 For development and the supported schema-v3 workflow:
 
-- Go 1.26.6.
+- Building REW from source requires Go 1.26.6.
+- Schema-v3 capture supports Go 1.25.14 or Go 1.26.6 (exact patch versions).
 - Docker Engine or Docker Desktop with Linux containers.
 - Linux AMD64 container execution support.
 - Access to the pinned replay image when it is not already cached.
@@ -96,6 +97,8 @@ Replay containers run without network access. The Docker host may still need net
 
 The first public REW prerelease is
 [v0.1.0-alpha.5](https://github.com/rewtools/rew/releases/tag/v0.1.0-alpha.5).
+
+Go 1.25.14 support is currently available only in the development source; the published alpha.5 binaries support Go 1.26.6.
 
 Prebuilt binaries are available for macOS ARM64 and Linux AMD64.
 
@@ -512,7 +515,7 @@ For the schema-v3 replay snapshot trust assumptions, Docker volume boundaries, a
 The current schema-v3 implementation:
 
 - Supports only the exact command `go build ./...`.
-- Requires Go 1.26.6.
+- Requires Go 1.25.14 or Go 1.26.6 for schema-v3 capture (exact patch versions).
 - Supports up to 128 selected external Go modules, including transitive dependencies, with at most 64 full ZIP modules.
 - The current implementation supports opt-in
   `--include-go-sources` to select main-module Go source files,
