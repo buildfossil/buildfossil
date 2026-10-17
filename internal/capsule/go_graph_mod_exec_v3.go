@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -19,6 +20,24 @@ func ListGoGraphModRequirementsV3(
 	mainModulePath string,
 	selected []GoModuleIdentityV3,
 ) ([]GoModuleIdentityV3, error) {
+	goExecutable, err := ResolveGoExecutable()
+	if err != nil {
+		return nil, err
+	}
+	return ListGoGraphModRequirementsV3WithExecutable(workspaceRoot, moduleCacheRoot, mainModulePath, selected, goExecutable)
+}
+
+func ListGoGraphModRequirementsV3WithExecutable(
+	workspaceRoot string,
+	moduleCacheRoot string,
+	mainModulePath string,
+	selected []GoModuleIdentityV3,
+	goExecutable string,
+) ([]GoModuleIdentityV3, error) {
+	if !filepath.IsAbs(goExecutable) {
+		return nil, fmt.Errorf("capsule: Go executable must be absolute")
+	}
+
 	if workspaceRoot == "" || moduleCacheRoot == "" {
 		return nil, fmt.Errorf("capsule: missing workspace or module cache")
 	}
@@ -28,7 +47,7 @@ func ListGoGraphModRequirementsV3(
 	)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "go", "mod", "graph")
+	cmd := exec.CommandContext(ctx, goExecutable, "mod", "graph")
 	cmd.Dir = workspaceRoot
 
 	env := make([]string, 0, len(os.Environ())+10)

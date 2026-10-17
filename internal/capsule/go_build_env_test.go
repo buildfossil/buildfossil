@@ -1,6 +1,8 @@
 package capsule
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -97,5 +99,45 @@ func TestInspectGoBuildEnvironment(t *testing.T) {
 		env.CGOEnabled != "0" ||
 		env.GOFLAGS != "" {
 		t.Fatalf("unexpected environment: %+v", env)
+	}
+}
+
+func TestInspectGoBuildEnvironmentWithExecutable(t *testing.T) {
+	dir := t.TempDir()
+	goExecutable := filepath.Join(dir, "fake-go")
+
+	script := "#!/bin/sh\n" +
+		"if [ \"$GOTOOLCHAIN\" != local ]; then exit 9; fi\n" +
+		"printf 'darwin\\narm64\\n0\\n\\n'\n"
+
+	if err := os.WriteFile(
+		goExecutable, []byte(script), 0700,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("GOTOOLCHAIN", "auto")
+
+	env, err := InspectGoBuildEnvironmentWithExecutable(
+		dir, goExecutable,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if env.GOOS != "darwin" ||
+		env.GOARCH != "arm64" ||
+		env.CGOEnabled != "0" ||
+		env.GOFLAGS != "" {
+		t.Fatalf("unexpected Go environment: %+v", env)
+	}
+}
+
+func TestInspectGoBuildEnvironmentWithRelativeExecutable(t *testing.T) {
+	_, err := InspectGoBuildEnvironmentWithExecutable(
+		t.TempDir(), "go",
+	)
+	if err == nil {
+		t.Fatal("expected relative executable rejection")
 	}
 }

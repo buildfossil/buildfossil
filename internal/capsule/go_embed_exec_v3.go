@@ -25,6 +25,26 @@ func DiscoverGoEmbedFilesV3(
 	moduleCacheRoot string,
 	sourceTarget ...GoBuildEnvironment,
 ) ([]string, error) {
+	goExecutable, err := ResolveGoExecutable()
+	if err != nil {
+		return nil, err
+	}
+	return DiscoverGoEmbedFilesV3WithExecutable(
+		workspaceRoot, moduleCacheRoot, goExecutable, sourceTarget...,
+	)
+}
+
+// DiscoverGoEmbedFilesV3WithExecutable runs discovery using the selected Go toolchain.
+func DiscoverGoEmbedFilesV3WithExecutable(
+	workspaceRoot string,
+	moduleCacheRoot string,
+	goExecutable string,
+	sourceTarget ...GoBuildEnvironment,
+) ([]string, error) {
+	if !filepath.IsAbs(goExecutable) {
+		return nil, fmt.Errorf("capsule: Go executable must be absolute")
+	}
+
 	targets := []GoBuildEnvironment{
 		{GOOS: "linux", GOARCH: "amd64"},
 	}
@@ -48,6 +68,7 @@ func DiscoverGoEmbedFilesV3(
 	seen := make(map[string]struct{})
 	for _, target := range targets {
 		found, err := discoverGoEmbedForTargetV3(
+			goExecutable,
 			workspaceRoot, moduleCacheRoot, target.GOOS, target.GOARCH,
 		)
 		if err != nil {
@@ -74,6 +95,7 @@ func DiscoverGoEmbedFilesV3(
 }
 
 func discoverGoEmbedForTargetV3(
+	goExecutable string,
 	workspaceRoot string,
 	moduleCacheRoot string,
 	targetGOOS string,
@@ -105,7 +127,7 @@ func discoverGoEmbedForTargetV3(
 
 	cmd := exec.CommandContext(
 		ctx,
-		"go", "list", "-e", "-json", "./...",
+		goExecutable, "list", "-e", "-json", "./...",
 	)
 	cmd.Dir = physicalRoot
 

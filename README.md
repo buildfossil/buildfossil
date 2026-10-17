@@ -410,6 +410,12 @@ go mod download
 
 Make sure `go.sum` contains both the module and its `/go.mod` checksum entries.
 
+Schema-v3 capture selects the `go` executable from `PATH` once
+and reuses its absolute path throughout capture. It enforces
+`GOTOOLCHAIN=local` for Go subprocesses, even if the inherited setting
+allows automatic switching. The selected executable is not protected
+against modification or replacement on disk.
+
 For a portable Linux AMD64 build target, set:
 
 ```sh

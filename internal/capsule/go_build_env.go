@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -21,6 +22,28 @@ func InspectGoBuildEnvironment(workingDir string) (
 	GoBuildEnvironment,
 	error,
 ) {
+	goExecutable, err := ResolveGoExecutable()
+	if err != nil {
+		return GoBuildEnvironment{}, err
+	}
+
+	return InspectGoBuildEnvironmentWithExecutable(
+		workingDir, goExecutable,
+	)
+}
+
+// InspectGoBuildEnvironmentWithExecutable reads the Go environment
+// through an explicitly selected executable with GOTOOLCHAIN=local.
+func InspectGoBuildEnvironmentWithExecutable(
+	workingDir string,
+	goExecutable string,
+) (GoBuildEnvironment, error) {
+	if !filepath.IsAbs(goExecutable) {
+		return GoBuildEnvironment{}, fmt.Errorf(
+			"inspect Go environment: executable must be absolute",
+		)
+	}
+
 	ctx, cancel := context.WithTimeout(
 		context.Background(),
 		5*time.Second,
@@ -29,7 +52,7 @@ func InspectGoBuildEnvironment(workingDir string) (
 
 	cmd := exec.CommandContext(
 		ctx,
-		"go",
+		goExecutable,
 		"env",
 		"GOOS",
 		"GOARCH",
@@ -38,6 +61,7 @@ func InspectGoBuildEnvironment(workingDir string) (
 	)
 
 	cmd.Dir = workingDir
+	cmd.Env = LocalGoToolchainEnv()
 
 	output, err := cmd.Output()
 	if err != nil {

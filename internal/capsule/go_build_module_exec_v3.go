@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -21,6 +22,23 @@ func ListGoBuildModulesV3(
 	moduleCacheRoot string,
 	selected []GoModuleIdentityV3,
 ) ([]GoModuleIdentityV3, error) {
+	goExecutable, err := ResolveGoExecutable()
+	if err != nil {
+		return nil, err
+	}
+	return ListGoBuildModulesV3WithExecutable(workspaceRoot, moduleCacheRoot, selected, goExecutable)
+}
+
+func ListGoBuildModulesV3WithExecutable(
+	workspaceRoot string,
+	moduleCacheRoot string,
+	selected []GoModuleIdentityV3,
+	goExecutable string,
+) ([]GoModuleIdentityV3, error) {
+	if !filepath.IsAbs(goExecutable) {
+		return nil, fmt.Errorf("capsule: Go executable must be absolute")
+	}
+
 	if workspaceRoot == "" || moduleCacheRoot == "" {
 		return nil, fmt.Errorf(
 			"capsule: missing build workspace or module cache",
@@ -35,7 +53,7 @@ func ListGoBuildModulesV3(
 
 	cmd := exec.CommandContext(
 		ctx,
-		"go", "list", "-deps", "-e", "-json", "./...",
+		goExecutable, "list", "-deps", "-e", "-json", "./...",
 	)
 	cmd.Dir = workspaceRoot
 
